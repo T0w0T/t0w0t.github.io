@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DNSSEC Real-Time Validator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --bg-color: #0a0a0a; --fg-color: #d0d0d0; --cyan-glow: #00e6e6; --green-glow: #50fa7b; --border-color: #44475a; }
+        body { font-family: 'Fira Code', monospace; background-color: var(--bg-color); color: var(--fg-color); }
+        #matrix-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.3; }
+        body::after { content: " "; display: block; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06)); z-index: 0; background-size: 100% 2px, 3px 100%; pointer-events: none; animation: flicker 0.15s infinite; }
+        @keyframes flicker { 0% { opacity: 0.2; } 20% { opacity: 0.8; } 40% { opacity: 0.3; } 60% { opacity: 0.9; } 80% { opacity: 0.4; } 100% { opacity: 1; } }
+        .main-container { position: relative; z-index: 1; }
+        .terminal-window { background-color: rgba(10, 10, 10, 0.75); backdrop-filter: blur(4px); border: 1px solid var(--border-color); box-shadow: 0 0 15px rgba(0, 230, 230, 0.2); transition: all 0.3s ease-in-out; }
+        .header-title { color: var(--cyan-glow); text-shadow: 0 0 5px var(--cyan-glow), 0 0 10px var(--cyan-glow); letter-spacing: 2px; }
+        .zone-title { color: var(--green-glow); text-shadow: 0 0 5px var(--green-glow); }
+        .highlight-zone { border-color: var(--cyan-glow); transform: scale(1.01); box-shadow: 0 0 25px rgba(0, 230, 230, 0.6), inset 0 0 15px rgba(0, 230, 230, 0.3); }
+        .element-box { border: 1px solid var(--border-color); transition: all 0.2s ease-out; }
+        .highlight-element { background-color: rgba(0, 230, 230, 0.1); color: var(--cyan-glow); border-color: var(--cyan-glow); box-shadow: inset 0 0 8px var(--cyan-glow); animation: pulse-cyan 1.5s infinite; }
+        .highlight-verifier { background-color: rgba(80, 250, 123, 0.1); color: var(--green-glow); border-color: var(--green-glow); box-shadow: inset 0 0 8px var(--green-glow); animation: pulse-green 1.5s infinite; }
+        @keyframes pulse-cyan { 0% { box-shadow: inset 0 0 8px var(--cyan-glow); } 50% { box-shadow: inset 0 0 18px var(--cyan-glow); } 100% { box-shadow: inset 0 0 8px var(--cyan-glow); } }
+        @keyframes pulse-green { 0% { box-shadow: inset 0 0 8px var(--green-glow); } 50% { box-shadow: inset 0 0 18px var(--green-glow); } 100% { box-shadow: inset 0 0 8px var(--green-glow); } }
+        .terminal-button { background-color: transparent; border: 1px solid var(--cyan-glow); color: var(--cyan-glow); text-shadow: 0 0 3px var(--cyan-glow); border-radius: 0; transition: all 0.2s ease-in-out; }
+        .terminal-button:hover:not(.disabled-button) { background-color: rgba(0, 230, 230, 0.2); box-shadow: 0 0 10px var(--cyan-glow); }
+        .disabled-button { opacity: 0.4; cursor: not-allowed; background-color: transparent !important; box-shadow: none !important; }
+        .typing-cursor::after { content: '█'; color: var(--cyan-glow); animation: blink 1s step-end infinite; }
+        @keyframes blink { 50% { opacity: 0; } }
+        .validation-success { animation: success-flash 0.5s ease-out; color: var(--green-glow) !important; text-shadow: 0 0 10px var(--green-glow) !important; }
+        @keyframes success-flash { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        .hidden { display: none !important; }
+        .code-block { background-color: #000; border-left: 3px solid var(--green-glow); padding: 8px; margin-top: 8px; font-size: 0.8rem; white-space: pre-wrap; word-break: break-all; }
+    </style>
+</head>
+<body>
+    <canvas id="matrix-canvas"></canvas>
+    <div class="max-w-7xl mx-auto p-4 lg:p-8 main-container">
+        <header class="text-center mb-4">
+            <h1 class="text-3xl md:text-4xl font-bold header-title">---==[ DNSSEC VALIDATOR ]==---</h1>
+            <p class="mt-2 text-lg text-gray-400 font-mono">[[ Trust Chain Analysis Module ]]</p>
+        </header>
+
+        <div class="terminal-window p-4 mb-8 max-w-3xl mx-auto">
+            <div class="flex items-center space-x-4">
+                <label for="domain-input" class="text-green-glow font-mono text-lg">&gt; domain:</label>
+                <input type="text" id="domain-input" class="flex-grow bg-black text-gray-300 p-2 border border-gray-600 focus:border-cyan-400 focus:outline-none font-mono" placeholder="e.g., icann.org, afnic.fr, google.com">
+                <button id="validate-btn" class="terminal-button p-2">[ Validate Domain ]</button>
+            </div>
+        </div>
+
+        <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="lg:col-span-2 space-y-6 relative">
+                 <div id="zone-root" class="zone terminal-window p-4">
+                    <h2 class="text-xl font-bold text-center zone-title mb-4">&gt;_ Zone :: Root (.)</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="space-y-3"><h3 class="font-semibold text-gray-400">[ Keys ]</h3>
+                            <div id="root-ksk" class="p-2 element-box cursor-pointer hover:bg-gray-800"><p class="font-mono text-sm">KSK (Trust Anchor)</p></div>
+                            <div id="root-zsk" class="p-2 element-box cursor-pointer hover:bg-gray-800"><p class="font-mono text-sm">ZSK</p></div>
+                        </div>
+                        <div class="space-y-3"><h3 class="font-semibold text-gray-400">[ Records ]</h3>
+                            <div id="root-ds-com" class="p-2 element-box cursor-pointer hover:bg-gray-800"><p class="font-mono text-sm">DS for .com</p></div>
+                             <div id="root-dnskey-sig" class="p-2 element-box cursor-pointer hover:bg-gray-800"><p class="font-mono text-sm">RRSIG(DNSKEY)</p></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-center text-2xl text-cyan-400 font-mono animate-pulse">||</div>
+                <div id="zone-com" class="zone terminal-window p-4">
+                    <h2 class="text-xl font-bold text-center zone-title mb-4">&gt;_ Zone :: TLD (.com)</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                         <div class="space-y-3"><h3 class="font-semibold text-gray-400">[ Keys ]</h3>
+                            <div id="com-ksk" class="p-2 element-box cursor-pointer hover:bg-gray-800"><p class="font-mono text-sm">KSK</p></div>
+                            <div id="com-zsk" class="p-2 element-box cursor-pointer hover:bg-gray-800"><p class="font-mono text-sm">ZSK</p></div>
+                        </div>
+                        <div class="space-y-3"><h3 class="font-semibold text-gray-400">[ Records ]</h3>
+                            <div id="com-ds-example" class="p-2 element-box cursor-pointer hover:bg-gray-800"><p class="font-mono text-sm">DS for example.com</p></div>
+                            <div id="com-dnskey-sig" class="p-2 element-box cursor-pointer hover:bg-gray-800"><p class="font-mono text-sm">RRSIG(DNSKEY)</p></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-center text-2xl text-cyan-400 font-mono animate-pulse">||</div>
+                <div id="zone-example" class="zone terminal-window p-4">
+                    <h2 class="text-xl font-bold text-center zone-title mb-4">&gt;_ Zone :: Domain (example.com)</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="space-y-3"><h3 class="font-semibold text-gray-400">[ Keys & Data ]</h3>
+                             <div id="example-ksk" class="p-2 element-box cursor-pointer hover:bg-gray-800"><p class="font-mono text-sm">KSK</p></div>
+                            <div id="example-zsk" class="p-2 element-box cursor-pointer hover:bg-gray-800"><p class="font-mono text-sm">ZSK</p></div>
+                            <div id="example-a" class="p-2 element-box cursor-pointer hover:bg-gray-800"><p class="font-mono text-sm">A: 93.184.216.34</p></div>
+                        </div>
+                        <div class="space-y-3"><h3 class="font-semibold text-gray-400">[ Signatures ]</h3>
+                            <div id="example-dnskey-sig" class="p-2 element-box cursor-pointer hover:bg-gray-800"><p class="font-mono text-sm">RRSIG(DNSKEY)</p></div>
+                            <div id="example-a-sig" class="p-2 element-box cursor-pointer hover:bg-gray-800"><p class="font-mono text-sm">RRSIG(A)</p></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="lg:col-span-1">
+                <div class="sticky top-8 terminal-window p-6">
+                    <h2 id="info-title" class="text-xl font-bold mb-2 header-title">./validator.sh</h2>
+                    <div class="h-96 overflow-y-auto" id="info-panel-content"><p id="info-text">> Initializing DNSSEC validation module...<br>> Enter a domain and start validation.</p></div>
+                    <div class="flex space-x-4 mt-4">
+                        <button id="start-btn" class="w-full terminal-button hidden">[ Start Sim ]</button>
+                        <button id="next-btn" class="w-full terminal-button hidden">[ Next &gt; ]</button>
+                        <button id="reset-btn" class="w-full terminal-button hidden">[ Reset ]</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Matrix background effect (unchanged)
+            const canvas = document.getElementById('matrix-canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            const alphabet = 'アァカサタナハマヤャラワガザダバパイィキシチニヒミリヰギジヂビピウゥクスツヌフムユュルグズブヅプエェケセテネヘメレヱゲゼデベペオォコソトノホモヨョロヲゴゾドボポヴッンABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            const fontSize = 16;
+            const columns = canvas.width / fontSize;
+            const rainDrops = Array.from({ length: columns }).fill(1);
+            const drawMatrix = () => {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = 'var(--cyan-glow)';
+                ctx.font = `${fontSize}px monospace`;
+                rainDrops.forEach((y, ind) => {
+                    const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+                    ctx.fillText(text, ind * fontSize, y * fontSize);
+                    if (y * fontSize > canvas.height && Math.random() > 0.975) {
+                        rainDrops[ind] = 0;
+                    }
+                    rainDrops[ind]++;
+                });
+            };
+            setInterval(drawMatrix, 33);
+
+            const state = { currentStep: -1, validationData: null };
+            const ui = {
+                validateButton: document.getElementById('validate-btn'),
+                domainInput: document.getElementById('domain-input'),
+                startButton: document.getElementById('start-btn'), nextButton: document.getElementById('next-btn'), resetButton: document.getElementById('reset-btn'), infoTitle: document.getElementById('info-title'), infoPanelContent: document.getElementById('info-panel-content'), infoText: document.getElementById('info-text'),
+                zones: { root: document.getElementById('zone-root'), com: document.getElementById('zone-com'), example: document.getElementById('zone-example'), },
+                elements: { 'root-ksk': document.getElementById('root-ksk'), 'root-zsk': document.getElementById('root-zsk'), 'root-ds-com': document.getElementById('root-ds-com'), 'root-dnskey-sig': document.getElementById('root-dnskey-sig'), 'com-ksk': document.getElementById('com-ksk'), 'com-zsk': document.getElementById('com-zsk'), 'com-ds-example': document.getElementById('com-ds-example'), 'com-dnskey-sig': document.getElementById('com-dnskey-sig'), 'example-ksk': document.getElementById('example-ksk'), 'example-zsk': document.getElementById('example-zsk'), 'example-a': document.getElementById('example-a'), 'example-dnskey-sig': document.getElementById('example-dnskey-sig'), 'example-a-sig': document.getElementById('example-a-sig'), }
+            };
+
+            // --- NOUVELLE PARTIE : EXPLICATIONS DÉTAILLÉES ---
+            const detailedExplanations = {
+                'DS_RECORD': {
+                    title: 'Enregistrement DS (Delegation Signer)',
+                    content: `
+                        <p class="mb-2">Un DS record est une empreinte (hash) d'une clé DNSKEY publiée dans une zone enfant, mais stockée dans la zone parente. Il sert de <strong>chaînon de confiance</strong> dans DNSSEC.</p>
+                        <h4 class="font-bold text-green-400 mt-3">📌 Rôle</h4>
+                        <p>Il fait le lien entre la zone parente (ex: .com) et la zone enfant (ex: example.com) en certifiant quelle clé publique (DNSKEY) de l'enfant est légitime.</p>
+                        <h4 class="font-bold text-green-400 mt-3">📌 Contenu d'un enregistrement DS</h4>
+                        <p>Un DS contient 4 parties :</p>
+                        <ol class="list-decimal list-inside text-sm pl-2">
+                            <li><strong>Key Tag</strong>: Identifiant numérique de la clé DNSKEY enfant.</li>
+                            <li><strong>Algorithme</strong>: Algorithme de la clé (ex: 13 = ECDSAP256SHA256).</li>
+                            <li><strong>Digest Type</strong>: Algorithme de hachage utilisé (ex: 2 = SHA-256).</li>
+                            <li><strong>Digest</strong>: L'empreinte (le hash) de la clé DNSKEY enfant.</li>
+                        </ol>
+                         <h4 class="font-bold text-green-400 mt-3">📌 Fonctionnement</h4>
+                         <p>Le résolveur compare le hash de la clé DNSKEY de l'enfant avec la valeur du Digest dans le DS record du parent. Si ça correspond, le lien de confiance est établi.</p>
+                    `
+                },
+                 'root-ksk': { title: 'KSK Racine (Ancre de Confiance)', content: 'Clé maîtresse. Sa partie publique est pré-installée dans le résolveur. C\'est la source de toute confiance.' },
+                 'example-a': { title: 'Enregistrement A', content: 'La donnée finale : l\'adresse IP du domaine. C\'est l\'information que l\'utilisateur cherchait initialement.' },
+                 'example-a-sig': { title: 'RRSIG(A)', content: 'La signature de l\'enregistrement A. Elle est créée avec la clé ZSK de la zone. Le résolveur l\'utilise pour prouver que l\'adresse IP n\'a pas été modifiée.' },
+            };
+            
+            const steps = [
+                { title: "Querying Root", text: "> Le résolveur interroge la zone racine (.) pour l'enregistrement DS du TLD...", action: () => { highlightZone('root'); highlightElement('root-ds-com'); } },
+                { title: "Verifying Root Chain", text: "> Vérification de la signature (RRSIG) du DS avec la ZSK racine, elle-même validée par la KSK racine (Ancre de Confiance)...", action: () => { highlightElement('root-ds-com'); highlightElement('root-dnskey-sig'); highlightElement('root-zsk'); highlightElement('root-ksk', true); } },
+                { title: "Validating TLD KSK", text: "> Le DS de la racine correspond au hash de la KSK du TLD. Lien de confiance établi !", action: () => { clearHighlights(); highlightZone('com'); highlightElement('root-ds-com', true); highlightElement('com-ksk'); } },
+                { title: "Querying TLD", text: "> Confiant, le résolveur demande au TLD le DS pour le domaine final...", action: () => { clearHighlights(); highlightZone('com'); highlightElement('com-ds-example'); } },
+                { title: "Validating Domain KSK", text: "> Le DS du TLD valide la KSK du domaine. Lien de confiance final établi !", action: () => { clearHighlights(); highlightZone('example'); highlightElement('com-ds-example', true); highlightElement('example-ksk'); } },
+                { title: "Querying Domain for A record", text: "> Le résolveur demande l'enregistrement A (IP) et sa signature à la zone du domaine...", action: () => { clearHighlights(); highlightZone('example'); highlightElement('example-a'); highlightElement('example-a-sig'); } },
+                { title: "Final Signature Verification", text: "> Ultime vérification : la signature de l'IP (RRSIG A) est validée avec la ZSK du domaine, elle-même validée par la KSK du domaine.", action: () => { clearHighlights(); highlightZone('example'); highlightElement('example-a-sig'); highlightElement('example-zsk', true); highlightElement('example-dnskey-sig'); highlightElement('example-ksk', true); } },
+                { title: "Validation Complete", text: "<span class='validation-success'>> VALIDATION RÉUSSIE ! La chaîne de confiance est intacte. L'adresse IP est authentique.</span>", action: () => { clearHighlights(); highlightZone('example'); ui.elements['example-a'].classList.add('highlight-verifier'); } }
+            ];
+
+            function typewriter(element, text, callback) {
+                let i = 0; element.innerHTML = ''; element.classList.add('typing-cursor');
+                const type = () => {
+                    if (i < text.length) {
+                        const char = text.charAt(i);
+                        if (char === '<') { const end = text.indexOf('>', i); element.innerHTML += text.substring(i, end + 1); i = end; } else { element.innerHTML += char; }
+                        i++; setTimeout(type, 15);
+                    } else { element.classList.remove('typing-cursor'); if (callback) callback(); }
+                };
+                type();
+            }
+            
+            function start() { state.currentStep = 0; ui.startButton.classList.add('hidden'); ui.nextButton.classList.remove('hidden'); ui.resetButton.classList.remove('hidden'); executeStep(); }
+            function next() { if (state.currentStep < steps.length - 1) { state.currentStep++; executeStep(); } if (state.currentStep === steps.length - 1) { ui.nextButton.classList.add('disabled-button'); } }
+            function reset() {
+                state.currentStep = -1; state.validationData = null;
+                ui.startButton.classList.add('hidden'); ui.nextButton.classList.add('hidden'); ui.resetButton.classList.add('hidden'); ui.nextButton.classList.remove('disabled-button');
+                ui.infoTitle.textContent = "./validator.sh";
+                typewriter(ui.infoText, "> Initializing DNSSEC validation module...<br>> Enter a domain and start validation.");
+                clearHighlights();
+                // Reset UI to placeholder text
+                Object.values(ui.elements).forEach(el => el.firstElementChild.textContent = el.firstElementChild.textContent.split(':')[0]);
+                 ui.zones.com.querySelector('h2').textContent = ">_ Zone :: TLD (.com)";
+                 ui.zones.example.querySelector('h2').textContent = ">_ Zone :: Domain (example.com)";
+                 ui.elements['com-ds-example'].querySelector('p').textContent = "DS for example.com";
+            }
+            function executeStep() { const step = steps[state.currentStep]; ui.infoTitle.textContent = `[ Step ${state.currentStep + 1} :: ${step.title} ]`; clearHighlights(); typewriter(ui.infoText, step.text, step.action); }
+            function highlightZone(zoneId) { Object.values(ui.zones).forEach(z => z.classList.remove('highlight-zone')); if (zoneId) ui.zones[zoneId].classList.add('highlight-zone'); }
+            function highlightElement(elementId, isVerifier = false) { ui.elements[elementId].classList.add(isVerifier ? 'highlight-verifier' : 'highlight-element'); }
+            function clearHighlights() { highlightZone(null); Object.values(ui.elements).forEach(el => el.classList.remove('highlight-element', 'highlight-verifier')); }
+            
+            function showElementInfo(elementId) {
+                if (state.currentStep === -1 && !state.validationData) return;
+                
+                let infoKey = elementId;
+                if (elementId.includes('-ds-')) {
+                    infoKey = 'DS_RECORD'; // Use the generic, detailed DS explanation
+                }
+                
+                const info = detailedExplanations[infoKey];
+                if (info) {
+                    const originalText = (state.currentStep > -1) ? steps[state.currentStep].text : "> Click [Next] to begin validation.";
+                    const fullText = `${originalText}<div class="mt-4 p-3 bg-black border border-gray-700"><h4 class="font-bold text-cyan-400">++ ${info.title} ++</h4><div>${info.content}</div></div>`;
+                    typewriter(ui.infoText, fullText);
+                }
+            }
+
+            // --- NOUVELLE PARTIE : LOGIQUE DE VALIDATION DYNAMIQUE ---
+            async function handleValidation() {
+                const domain = ui.domainInput.value;
+                if (!domain) { typewriter(ui.infoText, "> Error: Domain cannot be empty."); return; }
+
+                reset();
+                typewriter(ui.infoText, `> Querying DNSSEC chain for ${domain}...`);
+
+                try {
+                    // Pour le moment, nous simulons la réponse du back-end.
+                    // Dans une vraie application, la ligne suivante serait:
+                    // const data = await fetch(`http://localhost:3000/validate?domain=${domain}`).then(res => res.json());
+                    const data = getMockValidationData(domain);
+                    state.validationData = data;
+
+                    if (!data.isSecure) {
+                        throw new Error(data.error || 'Domain is not signed with DNSSEC.');
+                    }
+                    
+                    populateUiWithRealData(data);
+                    typewriter(ui.infoText, `> Validation chain for <strong>${domain}</strong> loaded.<br>> Click [Next] to start analysis.`);
+                    ui.nextButton.classList.remove('hidden', 'disabled-button');
+                    ui.resetButton.classList.remove('hidden');
+
+                } catch (error) {
+                    typewriter(ui.infoText, `> Validation failed for ${domain}.<br>> ${error.message}`);
+                }
+            }
+            
+            function populateUiWithRealData(data) {
+                const domainParts = data.domain.split('.');
+                const tld = domainParts.slice(-1)[0];
+                const mainDomain = domainParts.slice(-2).join('.');
+
+                // Update zone titles
+                ui.zones.com.querySelector('h2').textContent = `>_ Zone :: TLD (.${tld})`;
+                ui.zones.example.querySelector('h2').textContent = `>_ Zone :: Domain (${mainDomain})`;
+
+                // Root Zone
+                ui.elements['root-ksk'].innerHTML = `<p class="font-mono text-sm">KSK (Trust Anchor):<br><span class="text-gray-400">Key Tag: ${data.chain.root.ksk.tag}, Algo: ${data.chain.root.ksk.algo}</span></p>`; // <-- FUTURE DONNÉE DYNAMIQUE
+                ui.elements['root-ds-com'].innerHTML = `<p class="font-mono text-sm break-all">DS for .${tld}:<br><span class="text-gray-400">${data.chain.root.ds.digest.substring(0,24)}...</span></p>`; // <-- FUTURE DONNÉE DYNAMIQUE
+
+                // TLD Zone
+                ui.elements['com-ksk'].innerHTML = `<p class="font-mono text-sm">KSK:<br><span class="text-gray-400">Key Tag: ${data.chain.tld.ksk.tag}, Algo: ${data.chain.tld.ksk.algo}</span></p>`; // <-- FUTURE DONNÉE DYNAMIQUE
+                ui.elements['com-ds-example'].innerHTML = `<p class="font-mono text-sm break-all">DS for ${mainDomain}:<br><span class="text-gray-400">${data.chain.tld.ds.digest.substring(0,24)}...</span></p>`; // <-- FUTURE DONNÉE DYNAMIQUE
+
+                // Domain Zone
+                ui.elements['example-ksk'].innerHTML = `<p class="font-mono text-sm">KSK:<br><span class="text-gray-400">Key Tag: ${data.chain.domain.ksk.tag}, Algo: ${data.chain.domain.ksk.algo}</span></p>`; // <-- FUTURE DONNÉE DYNAMIQUE
+                ui.elements['example-zsk'].innerHTML = `<p class="font-mono text-sm">ZSK:<br><span class="text-gray-400">Key Tag: ${data.chain.domain.zsk.tag}, Algo: ${data.chain.domain.zsk.algo}</span></p>`; // <-- FUTURE DONNÉE DYNAMIQUE
+                ui.elements['example-a'].innerHTML = `<p class="font-mono text-sm">A: ${data.finalRecord.value}</p>`; // <-- FUTURE DONNÉE DYNAMIQUE
+            }
+
+            function getMockValidationData(domain) {
+                // Ceci est un MOCK. Un vrai back-end retournerait des données réelles.
+                 if (domain.includes("google")) {
+                    return {
+                        domain: "google.com", isSecure: true,
+                        finalRecord: { type: 'A', value: '142.250.179.14' },
+                        chain: {
+                            root: { ksk: { tag: 20326, algo: 8}, ds: { tag: 35886, algo: 8, digestType: 2, digest: 'E06D44B80B8F1D39A95C0B0D7C65D08458E880409BBC683457104237C7F42483' } },
+                            tld: { ksk: { tag: 35886, algo: 8}, ds: { tag: 40925, algo: 8, digestType: 2, digest: 'C3925233D33735A94383A4269A9AB92451C33399F16345A6756C2B4C1051873C' } },
+                            domain: { ksk: { tag: 40925, algo: 8 }, zsk: { tag: 34505, algo: 8 } }
+                        }
+                    }
+                }
+                // Données par défaut pour d'autres domaines
+                return {
+                    domain: domain, isSecure: true,
+                    finalRecord: { type: 'A', value: '93.184.216.34' },
+                    chain: {
+                        root: { ksk: { tag: 20326, algo: 8}, ds: { tag: 12345, algo: 8, digestType: 2, digest: '49AAC11D7B6F6446702E54A1607371607A1A41855200FD2CE1CDDE32F24E8FB5' } },
+                        tld: { ksk: { tag: 12345, algo: 8}, ds: { tag: 54321, algo: 8, digestType: 2, digest: '2BB6544A3A80F5A165A023B68583B0A5E358A14A51F2A7A4A258C5A862551465' } },
+                        domain: { ksk: { tag: 54321, algo: 8 }, zsk: { tag: 98765, algo: 8 } }
+                    }
+                };
+            }
+
+            ui.validateButton.addEventListener('click', handleValidation);
+            ui.startButton.addEventListener('click', start);
+            ui.nextButton.addEventListener('click', next);
+            ui.resetButton.addEventListener('click', reset);
+            Object.keys(ui.elements).forEach(id => { ui.elements[id].addEventListener('click', () => showElementInfo(id)); });
+        });
+    </script>
+</body>
+</html>
