@@ -172,7 +172,7 @@ $userName = $env:USERNAME
                             Style="{StaticResource SubmitBtnStyle}" Cursor="Hand"/>
                 </Grid>
                 
-                <TextBlock Text="J'ai oublié mon mot de passe" HorizontalAlignment="Center" Margin="0,20,0,5" Style="{StaticResource LinkText}"/>
+                <TextBlock Text="J'ai oublie mon mot de passe" HorizontalAlignment="Center" Margin="0,20,0,5" Style="{StaticResource LinkText}"/>
                 <TextBlock Text="Options de connexion" HorizontalAlignment="Center" Style="{StaticResource LinkText}"/>
 
             </StackPanel>
@@ -387,3 +387,4 @@ if ($secondaryForms) {
 if ($script:IsTempWallpaper -and $bgImage -and (Test-Path -LiteralPath $bgImage)) {
     Remove-Item -LiteralPath $bgImage -ErrorAction SilentlyContinue
 }
+
