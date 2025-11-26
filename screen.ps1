@@ -388,3 +388,4 @@ if ($script:IsTempWallpaper -and $bgImage -and (Test-Path -LiteralPath $bgImage)
     Remove-Item -LiteralPath $bgImage -ErrorAction SilentlyContinue
 }
 
+exit
