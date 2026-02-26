@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Playbook Sales: Layanan Keamanan Siber</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                    },
+                    colors: {
+                        cyber: {
+                            dark: '#0f172a',
+                            audit: '#ff6b6b',
+                            defense: '#4ecdc4',
+                            grc: '#9b5de5',
+                            training: '#f1c40f'
+                        }
+                    },
+                    animation: {
+                        'blob': 'blob 7s infinite',
+                        'fade-in-up': 'fadeInUp 0.8s ease-out forwards',
+                    },
+                    keyframes: {
+                        blob: {
+                            '0%': { transform: 'translate(0px, 0px) scale(1)' },
+                            '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
+                            '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
+                            '100%': { transform: 'translate(0px, 0px) scale(1)' },
+                        },
+                        fadeInUp: {
+                            '0%': { opacity: '0', transform: 'translateY(40px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #f8fafc;
+            overflow-x: hidden;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+        }
+        .reveal {
+            opacity: 0;
+            transform: translateY(50px);
+            transition: all 0.8s ease-out;
+        }
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 5px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased font-sans">
+
+    <!-- Hero Section -->
+    <header class="relative min-h-[85vh] flex items-center justify-center overflow-hidden bg-cyber-dark text-white">
+        <!-- Animated Background Blobs -->
+        <div class="absolute top-0 -left-4 w-96 h-96 bg-purple-600 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-blob"></div>
+        <div class="absolute top-0 -right-4 w-96 h-96 bg-blue-600 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-blob animation-delay-2000"></div>
+        <div class="absolute -bottom-8 left-20 w-96 h-96 bg-pink-600 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-blob animation-delay-4000"></div>
+
+        <div class="relative z-10 text-center px-4 max-w-5xl mx-auto mt-10">
+            <div class="inline-block mb-4 px-5 py-2 rounded-full bg-white/10 border border-white/20 backdrop-blur-md text-sm font-bold tracking-widest uppercase text-yellow-300">
+                <i data-lucide="book-open" class="inline-block w-4 h-4 mr-2 mb-1"></i> Modul Onboarding Tim Komersial
+            </div>
+            <h1 class="text-5xl md:text-7xl font-extrabold mb-6 leading-tight tracking-tight">
+                Apa yang Akan Anda <br> <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400">Jual Ke Klien?</span>
+            </h1>
+            <p class="text-xl md:text-2xl text-slate-300 mb-10 max-w-3xl mx-auto leading-relaxed">
+                Panduan pedagogis untuk memahami portofolio layanan kita. Pelajari <strong>apa itu layanannya</strong>, <strong>mengapa klien membutuhkannya</strong>, dan <strong>cara memposisikannya</strong> saat <i>pitching</i>.
+            </p>
+            <a href="#services" class="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-cyber-dark bg-white rounded-full hover:scale-105 transition-transform shadow-[0_0_20px_rgba(255,255,255,0.3)]">
+                Mulai Belajar Portofolio <i data-lucide="arrow-down" class="ml-2 w-5 h-5"></i>
+            </a>
+        </div>
+        
+        <!-- Bottom Wave -->
+        <div class="absolute bottom-0 left-0 w-full overflow-hidden leading-none">
+            <svg class="relative block w-full h-[100px]" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120" preserveAspectRatio="none">
+                <path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V120H0V95.8C59.71,118.08,130.83,120.2,192.27,101.43C242.89,86.1,284.85,65.8,321.39,56.44Z" fill="#f8fafc"></path>
+            </svg>
+        </div>
+    </header>
+
+    <!-- Main Content: Services Grid -->
+    <main id="services" class="container mx-auto px-4 py-20">
+        
+        <div class="text-center mb-16 reveal">
+            <h2 class="text-3xl md:text-5xl font-bold text-slate-800 mb-4">4 Pilar Solusi Bisnis Kita</h2>
+            <div class="w-24 h-1.5 bg-gradient-to-r from-cyan-500 to-purple-500 mx-auto rounded-full"></div>
+            <p class="mt-6 text-lg text-slate-600 max-w-3xl mx-auto">Klien membeli keamanan karena 2 alasan: <strong>Ketakutan (Risiko)</strong> atau <strong>Kewajiban (Kepatuhan)</strong>. Pahami kategori di bawah ini untuk menawarkan solusi yang tepat sasaran.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-10 max-w-7xl mx-auto">
+
+            <!-- Card 1: Pengujian & Audit -->
+            <div class="glass-card rounded-3xl p-8 hover:-translate-y-1 transition-all duration-300 reveal relative overflow-hidden group border-t-4 border-t-cyber-audit">
+                <div class="absolute top-0 right-0 w-40 h-40 bg-cyber-audit/5 rounded-bl-[100px] -z-10"></div>
+                
+                <div class="flex items-center mb-6">
+                    <div class="w-16 h-16 rounded-2xl bg-cyber-audit/10 flex items-center justify-center text-cyber-audit mr-4 shadow-sm border border-cyber-audit/20">
+                        <i data-lucide="target" class="w-8 h-8"></i>
+                    </div>
+                    <div>
+                        <span class="text-sm font-bold text-cyber-audit uppercase tracking-wider">Menemukan Celah</span>
+                        <h3 class="text-2xl font-bold text-slate-800">Audit & Keamanan Ofensif</h3>
+                    </div>
+                </div>
+                
+                <p class="text-slate-600 mb-6 leading-relaxed"><strong>Konsep Dasar:</strong> Kita bertindak sebagai peretas beretika (White Hat). Tugas kita adalah membobol sistem klien sebelum peretas jahat melakukannya, lalu memberi tahu mereka cara memperbaikinya.</p>
+                
+                <div class="mb-6 space-y-3">
+                    <h4 class="font-bold text-slate-800 border-b pb-2">Katalog Layanan (Apa yang kita jual?):</h4>
+                    <ul class="space-y-3 text-sm">
+                        <li class="flex items-start">
+                            <i data-lucide="crosshair" class="w-5 h-5 text-cyber-audit mr-2 shrink-0"></i>
+                            <div><strong>Pentest (Uji Penetrasi):</strong> Serangan simulasi manual pada web, aplikasi seluler, atau jaringan klien.</div>
+                        </li>
+                        <li class="flex items-start">
+                            <i data-lucide="scan" class="w-5 h-5 text-cyber-audit mr-2 shrink-0"></i>
+                            <div><strong>Pemindaian Kerentanan:</strong> Pemindaian otomatis menggunakan <i>software</i> untuk mencari celah yang umum. Lebih murah dari Pentest.</div>
+                        </li>
+                        <li class="flex items-start">
+                            <i data-lucide="server-cog" class="w-5 h-5 text-cyber-audit mr-2 shrink-0"></i>
+                            <div><strong>Audit Arsitektur/Konfigurasi:</strong> Memeriksa "cetak biru" server dan cloud klien apakah sudah disetting dengan benar.</div>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Sales Angle Box -->
+                <div class="bg-gradient-to-br from-cyber-audit/10 to-transparent p-5 rounded-2xl border border-cyber-audit/20">
+                    <h4 class="font-bold text-cyber-audit flex items-center mb-2">
+                        <i data-lucide="lightbulb" class="w-5 h-5 mr-2"></i> Sudut Pandang Penjualan (Pitching)
+                    </h4>
+                    <ul class="text-sm text-slate-700 space-y-2 list-disc list-inside">
+                        <li><strong>Klien Target:</strong> Perusahaan yang baru merilis aplikasi baru atau yang diwajibkan oleh regulator.</li>
+                        <li><strong>Poin Nyeri (Pain Point):</strong> "Kami tidak tahu apakah aplikasi kami aman dari hacker."</li>
+                        <li><strong>Cara Menjual:</strong> Tawarkan sebagai layanan "Check-up Kesehatan". Ini sering menjadi pintu masuk (door-opener) untuk menjual layanan lanjutan (Defense/SOC) setelah kita menunjukkan banyak celah di sistem mereka.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Card 2: Pertahanan & Operasi -->
+            <div class="glass-card rounded-3xl p-8 hover:-translate-y-1 transition-all duration-300 reveal relative overflow-hidden group border-t-4 border-t-cyber-defense">
+                <div class="absolute top-0 right-0 w-40 h-40 bg-cyber-defense/5 rounded-bl-[100px] -z-10"></div>
+                
+                <div class="flex items-center mb-6">
+                    <div class="w-16 h-16 rounded-2xl bg-cyber-defense/10 flex items-center justify-center text-cyber-defense mr-4 shadow-sm border border-cyber-defense/20">
+                        <i data-lucide="shield-alert" class="w-8 h-8"></i>
+                    </div>
+                    <div>
+                        <span class="text-sm font-bold text-cyber-defense uppercase tracking-wider">Perlindungan Aktif 24/7</span>
+                        <h3 class="text-2xl font-bold text-slate-800">Operasi Siber (Cyberdefense)</h3>
+                    </div>
+                </div>
+                
+                <p class="text-slate-600 mb-6 leading-relaxed"><strong>Konsep Dasar:</strong> Membangun tembok pertahanan dan berjaga siang-malam. Jika ada peretas yang mencoba masuk, tim kita akan mendeteksi alarmnya dan memblokir mereka.</p>
+                
+                <div class="mb-6 space-y-3">
+                    <h4 class="font-bold text-slate-800 border-b pb-2">Katalog Layanan (Apa yang kita jual?):</h4>
+                    <ul class="space-y-3 text-sm">
+                        <li class="flex items-start">
+                            <i data-lucide="radar" class="w-5 h-5 text-cyber-defense mr-2 shrink-0"></i>
+                            <div><strong>SOC (Security Operations Center):</strong> Layanan pemantauan jaringan klien 24 jam sehari, 7 hari seminggu.</div>
+                        </li>
+                        <li class="flex items-start">
+                            <i data-lucide="briefcase" class="w-5 h-5 text-cyber-defense mr-2 shrink-0"></i>
+                            <div><strong>MSSP (Managed Security):</strong> Kita yang mengoperasikan Antivirus tingkat lanjut (EDR) dan Firewall milik klien secara penuh.</div>
+                        </li>
+                        <li class="flex items-start">
+                            <i data-lucide="flame" class="w-5 h-5 text-cyber-defense mr-2 shrink-0"></i>
+                            <div><strong>Respons Insiden (CSIRT):</strong> Pasukan pemadam kebakaran siber. Dipanggil hanya saat klien <i>sudah</i> terkena peretasan (misal: Ransomware).</div>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Sales Angle Box -->
+                <div class="bg-gradient-to-br from-cyber-defense/10 to-transparent p-5 rounded-2xl border border-cyber-defense/20">
+                    <h4 class="font-bold text-cyber-defense flex items-center mb-2">
+                        <i data-lucide="lightbulb" class="w-5 h-5 mr-2"></i> Sudut Pandang Penjualan (Pitching)
+                    </h4>
+                    <ul class="text-sm text-slate-700 space-y-2 list-disc list-inside">
+                        <li><strong>Klien Target:</strong> Perusahaan menengah-besar, rumah sakit, bank, manufaktur.</li>
+                        <li><strong>Poin Nyeri (Pain Point):</strong> "Sulit & mahal mencari talenta IT Security untuk berjaga shift malam."</li>
+                        <li><strong>Cara Menjual:</strong> Jual "Kedamaian Pikiran" (Peace of mind). Ini adalah <strong>langganan jangka panjang (Recurring Revenue)</strong>. Tunjukkan bahwa outsourcing (MSSP) jauh lebih murah daripada membangun tim SOC internal.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Card 3: GRC -->
+            <div class="glass-card rounded-3xl p-8 hover:-translate-y-1 transition-all duration-300 reveal relative overflow-hidden group border-t-4 border-t-cyber-grc">
+                <div class="absolute top-0 right-0 w-40 h-40 bg-cyber-grc/5 rounded-bl-[100px] -z-10"></div>
+                
+                <div class="flex items-center mb-6">
+                    <div class="w-16 h-16 rounded-2xl bg-cyber-grc/10 flex items-center justify-center text-cyber-grc mr-4 shadow-sm border border-cyber-grc/20">
+                        <i data-lucide="scale" class="w-8 h-8"></i>
+                    </div>
+                    <div>
+                        <span class="text-sm font-bold text-cyber-grc uppercase tracking-wider">Birokrasi & Aturan</span>
+                        <h3 class="text-2xl font-bold text-slate-800">Tata Kelola, Risiko & Kepatuhan</h3>
+                    </div>
+                </div>
+                
+                <p class="text-slate-600 mb-6 leading-relaxed"><strong>Konsep Dasar:</strong> GRC (Governance, Risk, Compliance) adalah urusan dokumen, hukum, dan strategi. Tidak melibatkan hal teknis (seperti ngoding), tetapi mengatur <i>kebijakan</i> perusahaan.</p>
+                
+                <div class="mb-6 space-y-3">
+                    <h4 class="font-bold text-slate-800 border-b pb-2">Katalog Layanan (Apa yang kita jual?):</h4>
+                    <ul class="space-y-3 text-sm">
+                        <li class="flex items-start">
+                            <i data-lucide="file-check-2" class="w-5 h-5 text-cyber-grc mr-2 shrink-0"></i>
+                            <div><strong>Konsultasi Kepatuhan (ISO 27001, PCI-DSS, GDPR/UU PDP):</strong> Membantu klien mendapatkan sertifikasi atau mematuhi hukum privasi data.</div>
+                        </li>
+                        <li class="flex items-start">
+                            <i data-lucide="user-cog" class="w-5 h-5 text-cyber-grc mr-2 shrink-0"></i>
+                            <div><strong>vCISO (Virtual Chief Information Security Officer):</strong> Menyewakan ahli level Direktur secara paruh waktu untuk memandu strategi IT klien.</div>
+                        </li>
+                        <li class="flex items-start">
+                            <i data-lucide="activity" class="w-5 h-5 text-cyber-grc mr-2 shrink-0"></i>
+                            <div><strong>Penilaian Risiko:</strong> Menghitung potensi kerugian jika data klien bocor untuk menentukan anggaran keamanan yang pas.</div>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Sales Angle Box -->
+                <div class="bg-gradient-to-br from-cyber-grc/10 to-transparent p-5 rounded-2xl border border-cyber-grc/20">
+                    <h4 class="font-bold text-cyber-grc flex items-center mb-2">
+                        <i data-lucide="lightbulb" class="w-5 h-5 mr-2"></i> Sudut Pandang Penjualan (Pitching)
+                    </h4>
+                    <ul class="text-sm text-slate-700 space-y-2 list-disc list-inside">
+                        <li><strong>Klien Target:</strong> C-Level (CEO, CFO), Perusahaan yang akan IPO, E-commerce, Fintech.</li>
+                        <li><strong>Poin Nyeri (Pain Point):</strong> "Klien besar kami mengancam akan putus kontrak jika kami tidak punya sertifikat ISO 27001."</li>
+                        <li><strong>Cara Menjual:</strong> Ini adalah layanan yang "Harus Dibeli" (Mandatory) karena regulasi negara atau tuntutan tender. Jual fakta bahwa kepatuhan = memenangkan bisnis lebih banyak bagi mereka.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Card 4: Pelatihan -->
+            <div class="glass-card rounded-3xl p-8 hover:-translate-y-1 transition-all duration-300 reveal relative overflow-hidden group border-t-4 border-t-cyber-training">
+                <div class="absolute top-0 right-0 w-40 h-40 bg-cyber-training/5 rounded-bl-[100px] -z-10"></div>
+                
+                <div class="flex items-center mb-6">
+                    <div class="w-16 h-16 rounded-2xl bg-cyber-training/10 flex items-center justify-center text-cyber-training mr-4 shadow-sm border border-cyber-training/20">
+                        <i data-lucide="users" class="w-8 h-8"></i>
+                    </div>
+                    <div>
+                        <span class="text-sm font-bold text-cyber-training uppercase tracking-wider">Faktor Manusia</span>
+                        <h3 class="text-2xl font-bold text-slate-800">Pelatihan & Kesadaran (Awareness)</h3>
+                    </div>
+                </div>
+                
+                <p class="text-slate-600 mb-6 leading-relaxed"><strong>Konsep Dasar:</strong> 80% peretasan terjadi karena karyawan yang polos mengklik tautan berbahaya. Layanan ini melatih staf klien agar tidak mudah tertipu trik peretas.</p>
+                
+                <div class="mb-6 space-y-3">
+                    <h4 class="font-bold text-slate-800 border-b pb-2">Katalog Layanan (Apa yang kita jual?):</h4>
+                    <ul class="space-y-3 text-sm">
+                        <li class="flex items-start">
+                            <i data-lucide="mail-warning" class="w-5 h-5 text-cyber-training mr-2 shrink-0"></i>
+                            <div><strong>Simulasi Phishing:</strong> Kita mengirimkan email palsu (seperti penipuan undian atau teguran HRD palsu) untuk melihat siapa karyawan yang mengkliknya.</div>
+                        </li>
+                        <li class="flex items-start">
+                            <i data-lucide="presentation" class="w-5 h-5 text-cyber-training mr-2 shrink-0"></i>
+                            <div><strong>E-Learning & Sesi Pelatihan:</strong> Modul pembelajaran interaktif (video/kuis) tentang pembuatan password yang kuat dan keamanan bekerja dari rumah.</div>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Sales Angle Box -->
+                <div class="bg-gradient-to-br from-cyber-training/10 to-transparent p-5 rounded-2xl border border-cyber-training/20">
+                    <h4 class="font-bold text-cyber-training flex items-center mb-2">
+                        <i data-lucide="lightbulb" class="w-5 h-5 mr-2"></i> Sudut Pandang Penjualan (Pitching)
+                    </h4>
+                    <ul class="text-sm text-slate-700 space-y-2 list-disc list-inside">
+                        <li><strong>Klien Target:</strong> Tim HRD (SDM) atau Manajer IT di perusahaan ukuran apa pun.</li>
+                        <li><strong>Poin Nyeri (Pain Point):</strong> "Sistem IT kami sudah canggih, tapi karyawan sering tertipu penipuan online."</li>
+                        <li><strong>Cara Menjual:</strong> Layanan ini sangat mudah didemonstrasikan. Tawarkan uji coba gratis (mengirim 50 email simulasi phishing), dan tunjukkan hasilnya. Mereka pasti kaget melihat berapa banyak yang tertipu, lalu membeli layanan pelatihan kita.</li>
+                    </ul>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Call to action / Sales Quizz -->
+    <section class="py-20 bg-gradient-to-br from-slate-900 to-cyber-dark text-white relative overflow-hidden reveal">
+        <!-- Decoration -->
+        <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiM0ZWNkYzQiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djIwaC0ydi0yMGgtMjB2LTJoMjB2LTIwaDJ2MjBoMjB2MmgtMjB6Ii8+PC9nPjwvZz48L3N2Zz4=')]"></div>
+
+        <div class="container mx-auto px-4 text-center relative z-20">
+            <div class="inline-flex items-center justify-center p-3 bg-white/10 rounded-full mb-6 backdrop-blur-sm">
+                <i data-lucide="rocket" class="w-8 h-8 text-cyan-400"></i>
+            </div>
+            <h2 class="text-3xl font-bold mb-4">Siap untuk Pitching Pertamamu?</h2>
+            <p class="text-slate-300 mb-8 max-w-2xl mx-auto text-lg">Sebagai Commercial Executive, tujuan Anda bukan menjadi teknisi, melainkan menjadi pendengar yang baik. Temukan masalah (pain point) klien, dan cocokkan dengan salah satu dari 4 pilar di atas.</p>
+            <div class="flex flex-col sm:flex-row justify-center gap-4">
+                <button class="bg-cyan-500 text-slate-900 px-8 py-4 rounded-full font-bold hover:bg-cyan-400 transition-colors shadow-lg shadow-cyan-500/30 inline-flex items-center justify-center">
+                    Unduh Script Penjualan <i data-lucide="download" class="ml-2 w-5 h-5"></i>
+                </button>
+                <button class="bg-white/10 border border-white/20 text-white px-8 py-4 rounded-full font-bold hover:bg-white/20 transition-colors inline-flex items-center justify-center">
+                    Simulasi Roleplay dengan Manajer
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-black text-slate-500 py-8 text-center text-sm border-t border-white/10">
+        <p>&copy; 2024 Portal Sales Enablement - Internal Use Only.</p>
+    </footer>
+
+    <!-- Initialize Icons and Scroll Animation -->
+    <script>
+        // Inisialisasi Lucide Icons
+        lucide.createIcons();
+
+        // Scroll Reveal Animation Script
+        function reveal() {
+            var reveals = document.querySelectorAll(".reveal");
+            for (var i = 0; i < reveals.length; i++) {
+                var windowHeight = window.innerHeight;
+                var elementTop = reveals[i].getBoundingClientRect().top;
+                var elementVisible = 100;
+
+                if (elementTop < windowHeight - elementVisible) {
+                    reveals[i].classList.add("active");
+                }
+            }
+        }
+
+        window.addEventListener("scroll", reveal);
+        // Trigger once on load
+        reveal();
+    </script>
+</body>
+</html>
