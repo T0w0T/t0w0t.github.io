@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>مختبِر اختراق / عضو فريق الهجوم الأحمر | صحيفة تقنية</title>
+  <meta name="description" content="مقال بصيغة صحيفة تقنية عربية عن العبء المعرفي لمختبِري الاختراق وأعضاء فرق الهجوم الأحمر." />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;600;700;800&family=Noto+Sans+Arabic:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg:#0b0f17;
+      --paper:#0f1626;
+      --ink:#e9eefc;
+      --muted:#aab6d6;
+      --accent:#8fd3ff;
+      --accent2:#b5ffb8;
+      --warn:#ffd58f;
+      --line:rgba(255,255,255,.10);
+      --shadow: 0 14px 40px rgba(0,0,0,.45);
+      --radius: 22px;
+      --radius2: 14px;
+      --max: 980px;
+    }
+
+    *{box-sizing:border-box}
+
+    html,body{height:100%}
+    body{
+      margin:0;
+      background:
+        radial-gradient(1200px 700px at 80% 10%, rgba(143,211,255,.16), transparent 60%),
+        radial-gradient(900px 600px at 10% 40%, rgba(181,255,184,.10), transparent 55%),
+        radial-gradient(700px 500px at 60% 90%, rgba(255,213,143,.10), transparent 55%),
+        var(--bg);
+      color:var(--ink);
+      font-family:"Noto Sans Arabic", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      line-height:1.95;
+      overflow-x:hidden;
+    }
+
+    /* Subtle animated grain */
+    body::before{
+      content:"";
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      opacity:.09;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)' opacity='.45'/%3E%3C/svg%3E");
+      mix-blend-mode:overlay;
+      animation: grain 9s steps(8) infinite;
+    }
+    @keyframes grain{
+      0%{transform:translate3d(0,0,0)}
+      10%{transform:translate3d(-2%,1%,0)}
+      20%{transform:translate3d(-4%,-2%,0)}
+      30%{transform:translate3d(3%,2%,0)}
+      40%{transform:translate3d(2%,-3%,0)}
+      50%{transform:translate3d(-3%,3%,0)}
+      60%{transform:translate3d(-2%,-1%,0)}
+      70%{transform:translate3d(4%,1%,0)}
+      80%{transform:translate3d(2%,2%,0)}
+      90%{transform:translate3d(-1%,-3%,0)}
+      100%{transform:translate3d(0,0,0)}
+    }
+
+    a{color:inherit}
+
+    .wrap{
+      max-width:var(--max);
+      margin:0 auto;
+      padding:28px 18px 64px;
+      position:relative;
+    }
+
+    /* Top news bar */
+    .ticker{
+      display:flex;
+      gap:14px;
+      align-items:center;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.03);
+      border-radius:999px;
+      padding:10px 14px;
+      overflow:hidden;
+      box-shadow: 0 10px 24px rgba(0,0,0,.25);
+      backdrop-filter: blur(10px);
+    }
+    .badge{
+      font-family:"Noto Sans Arabic", sans-serif;
+      font-weight:700;
+      letter-spacing:.2px;
+      font-size:12px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(143,211,255,.35);
+      background:linear-gradient(135deg, rgba(143,211,255,.18), rgba(255,255,255,.02));
+      color:var(--ink);
+      white-space:nowrap;
+    }
+    .marquee{
+      display:flex;
+      gap:26px;
+      min-width:0;
+      flex:1;
+      opacity:.95;
+    }
+    .marquee > div{
+      display:flex;
+      gap:26px;
+      white-space:nowrap;
+      animation: scroll 20s linear infinite;
+    }
+    .marquee span{
+      color:var(--muted);
+      font-size:13px;
+    }
+    .marquee strong{color:var(--accent)}
+    @keyframes scroll{
+      from{transform:translateX(-10%)}
+      to{transform:translateX(60%)}
+    }
+
+    header{
+      margin-top:22px;
+      border-radius:var(--radius);
+      background:
+        radial-gradient(900px 420px at 80% 10%, rgba(143,211,255,.18), transparent 55%),
+        radial-gradient(600px 320px at 20% 30%, rgba(181,255,184,.10), transparent 55%),
+        linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      border:1px solid var(--line);
+      box-shadow: var(--shadow);
+      position:relative;
+      overflow:hidden;
+    }
+
+    .masthead{
+      display:grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap:18px;
+      padding:26px 24px 18px;
+    }
+
+    .paper-name{
+      font-family:"Noto Naskh Arabic", serif;
+      font-weight:800;
+      font-size:28px;
+      letter-spacing:.2px;
+      margin:0;
+    }
+    .paper-sub{
+      margin:6px 0 0;
+      color:var(--muted);
+      font-size:14px;
+    }
+
+    .meta{
+      display:flex;
+      justify-content:flex-start;
+      gap:10px;
+      flex-wrap:wrap;
+      align-content:flex-start;
+    }
+    .chip{
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.03);
+      padding:6px 10px;
+      border-radius:999px;
+      font-size:12px;
+      color:var(--muted);
+      backdrop-filter: blur(10px);
+    }
+    .chip b{color:var(--ink)}
+
+    .headline{
+      padding:0 24px 22px;
+    }
+    .headline h1{
+      font-family:"Noto Naskh Arabic", serif;
+      font-weight:800;
+      font-size:40px;
+      line-height:1.25;
+      margin:0 0 10px;
+      text-wrap:balance;
+    }
+    .headline p{
+      margin:0;
+      color:var(--muted);
+      font-size:15px;
+      max-width:70ch;
+    }
+
+    .divider{
+      height:1px;
+      background:linear-gradient(90deg, transparent, rgba(255,255,255,.14), transparent);
+      margin:0 24px 10px;
+    }
+
+    main{
+      margin-top:18px;
+      display:grid;
+      grid-template-columns: 1fr 320px;
+      gap:18px;
+      align-items:start;
+    }
+
+    article{
+      border-radius:var(--radius);
+      background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.02));
+      border:1px solid var(--line);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      position:relative;
+    }
+
+    .article-inner{padding:22px 22px 10px}
+
+    .lead{
+      font-family:"Noto Naskh Arabic", serif;
+      font-size:18px;
+      color:rgba(233,238,252,.95);
+      margin:0 0 16px;
+    }
+
+    .dropcap::first-letter{
+      font-family:"Noto Naskh Arabic", serif;
+      font-weight:800;
+      font-size:54px;
+      float:right;
+      line-height:1;
+      padding:0 10px 0 0;
+      margin-top:6px;
+      color:var(--accent);
+      text-shadow: 0 10px 40px rgba(143,211,255,.25);
+    }
+
+    h2{
+      font-family:"Noto Naskh Arabic", serif;
+      font-weight:800;
+      font-size:22px;
+      margin:22px 0 8px;
+    }
+
+    p{margin:0 0 14px; color:rgba(233,238,252,.92)}
+
+    ul{
+      margin:10px 0 14px;
+      padding:0 18px 0 0;
+    }
+    li{margin:6px 0; color:rgba(233,238,252,.92)}
+
+    .callout{
+      margin:18px 0;
+      padding:14px 14px;
+      border-radius:var(--radius2);
+      border:1px solid rgba(143,211,255,.22);
+      background:linear-gradient(135deg, rgba(143,211,255,.10), rgba(255,255,255,.02));
+      position:relative;
+      overflow:hidden;
+    }
+    .callout::after{
+      content:"";
+      position:absolute;
+      inset:-60px;
+      background: radial-gradient(circle at 30% 30%, rgba(143,211,255,.18), transparent 55%);
+      filter: blur(8px);
+      transform: rotate(10deg);
+      opacity:.9;
+      pointer-events:none;
+    }
+    .callout blockquote{
+      position:relative;
+      margin:0;
+      padding:0 14px 0 0;
+      border-right:3px solid rgba(143,211,255,.45);
+      font-family:"Noto Naskh Arabic", serif;
+      font-size:18px;
+      color:rgba(233,238,252,.95);
+    }
+
+    .timeline{
+      margin:14px 0 6px;
+      padding:0;
+      list-style:none;
+      border-right:1px dashed rgba(255,255,255,.16);
+    }
+    .timeline li{
+      position:relative;
+      padding:10px 12px 10px 0;
+      margin:0;
+    }
+    .timeline li::before{
+      content:"";
+      position:absolute;
+      right:-6px;
+      top:18px;
+      width:10px;
+      height:10px;
+      border-radius:999px;
+      background:rgba(181,255,184,.85);
+      box-shadow:0 0 0 6px rgba(181,255,184,.10);
+    }
+    .timeline b{color:var(--accent2)}
+
+    .footer{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      padding:14px 18px;
+      border-top:1px solid var(--line);
+      background:rgba(255,255,255,.02);
+      color:var(--muted);
+      font-size:12px;
+    }
+
+    aside{
+      position:sticky;
+      top:18px;
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+    }
+
+    .card{
+      border-radius:var(--radius);
+      border:1px solid var(--line);
+      background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.02));
+      box-shadow: 0 12px 26px rgba(0,0,0,.34);
+      overflow:hidden;
+    }
+    .card h3{
+      margin:0;
+      padding:14px 14px 10px;
+      font-family:"Noto Naskh Arabic", serif;
+      font-weight:800;
+      font-size:18px;
+      border-bottom:1px solid var(--line);
+    }
+    .card .body{padding:12px 14px 14px; color:var(--muted); font-size:13px}
+    .kpi{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+      margin-top:10px;
+    }
+    .kpi .box{
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(255,255,255,.02);
+      border-radius:14px;
+      padding:10px;
+    }
+    .kpi .num{font-weight:800; color:var(--ink); font-size:18px}
+    .kpi .lbl{font-size:12px; color:var(--muted)}
+
+    .progress{
+      height:10px;
+      border-radius:999px;
+      background:rgba(255,255,255,.06);
+      overflow:hidden;
+      margin-top:8px;
+      border:1px solid rgba(255,255,255,.08);
+    }
+    .bar{
+      height:100%;
+      width:60%;
+      background:linear-gradient(90deg, rgba(143,211,255,.85), rgba(181,255,184,.75));
+      transform-origin:right;
+      animation: pulse 3.5s ease-in-out infinite;
+    }
+    @keyframes pulse{
+      0%,100%{transform:scaleX(.55)}
+      50%{transform:scaleX(1)}
+    }
+
+    .tags{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px}
+    .tag{
+      font-size:12px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(255,255,255,.02);
+      color:rgba(233,238,252,.88);
+    }
+
+    /* Floating selection highlight */
+    ::selection{background:rgba(143,211,255,.25)}
+
+    /* Responsive */
+    @media (max-width: 980px){
+      main{grid-template-columns:1fr}
+      aside{position:relative; top:auto}
+      .masthead{grid-template-columns:1fr}
+    }
+    @media (prefers-reduced-motion: reduce){
+      *{animation:none !important; transition:none !important}
+      body::before{display:none}
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="ticker" aria-label="شريط أخبار">
+      <div class="badge">ملف خاص</div>
+      <div class="marquee" aria-hidden="true">
+        <div>
+          <span>الأمن السيبراني</span>
+          <span>•</span>
+          <span><strong>الهجوم الأحمر</strong>: التفكير تحت الضغط</span>
+          <span>•</span>
+          <span>خرائط ذهنية لأنظمة غير مرئية</span>
+          <span>•</span>
+          <span>إبداع ضمن قيود صارمة</span>
+          <span>•</span>
+          <span>إدارة عدم اليقين</span>
+        </div>
+      </div>
+    </div>
+
+    <header>
+      <div class="masthead">
+        <div>
+          <h2 class="paper-name">الصحيفة التقنية</h2>
+          <p class="paper-sub">قسم الأمن السيبراني | قراءة تحليلية في كواليس المهن عالية الحمل المعرفي</p>
+        </div>
+        <div class="meta">
+          <span class="chip"><b>تصنيف</b>: هندسة عكسية للعقل</span>
+          <span class="chip"><b>زمن القراءة</b>: 5 دقائق</span>
+          <span class="chip"><b>تنبيه</b>: كثافة معرفية</span>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="headline">
+        <h1>مختبِر اختراق / عضو فريق الهجوم الأحمر</h1>
+        <p>خلف الاسم المهني ذي الطابع الغريب، تختبئ حقيقة أقل استعراضًا وأكثر صرامةً: نشاط ذهني عند مستوى بالغ التطرف، من دون مرحلة ارتخاء حقيقية.</p>
+      </div>
+    </header>
+
+    <main>
+      <article>
+        <div class="article-inner">
+          <p class="lead dropcap">خلف هذا الاسم المهني ذي الطابع الغريب، على صورة من يمارسونه أحيانًا، تختبئ حقيقة أقل استعراضًا وأكثر صرامةً وموضوعية: نشاط ذهني يُمارَس عند مستوى بالغ التطرف، وربما يُعَدّ من بين الأكثر تطلبًا على الإطلاق بين مختلف المهن، من دون أي مرحلة ارتخاء حقيقية.</p>
+
+          <p>تفرض هذه المهنة استثارة متزامنة لعدة وظائف معرفية جوهرية، لا يمكن إلا لجزء ضئيل جدًا من الناس الادعاء بامتلاكها بهذا المستوى:</p>
+          <ul>
+            <li>ذاكرة عاملة مشبعة على الدوام</li>
+            <li>تفكير منطقي معقد</li>
+            <li>تصور ذهني لأنظمة غير مرئية</li>
+            <li>استباق استراتيجي</li>
+            <li>إبداع ضمن قيود صارمة</li>
+            <li>إدارة مطوّلة لحالة عدم اليقين</li>
+          </ul>
+
+          <h2>الدماغ لا يعالج مشكلة معزولة</h2>
+          <p>بل يحافظ باستمرار على خريطة ذهنية كاملة لبيئات تقنية بأكملها. إنه نشاط ذو عبء معرفي تراكمي، مع تعرض ممتد لحالة عدم اليقين.</p>
+
+          <div class="callout" role="note" aria-label="اقتباس">
+            <blockquote>
+              لا أحد ولا شيء يمكنه توجيه مختبِر الاختراق، سوى منطقه الخاص وفهمه العميق للأنظمة.
+            </blockquote>
+          </div>
+
+          <h2>حلقة لا تهدأ: نموذج، اختبار، إعادة تشكيل</h2>
+          <p>الدورة الذهنية ثابتة ومكثفة. صياغة فرضيات، محاكاة داخلية، اختبار واقعي، فشل، ثم إعادة تشكيل النموذج الذهني. وقد تستمر هذه الحلقة أيامًا أو أسابيع أو حتى أشهرًا، من دون انقطاع معرفي حقيقي.</p>
+
+          <ul class="timeline" aria-label="تسلسل ذهني">
+            <li><b>صياغة فرضيات</b> ثم التحقق من صلاحيتها ضمن قيود الواقع</li>
+            <li><b>محاكاة داخلية</b> لسلوك أنظمة غير مرئية وواجهات غير موثقة</li>
+            <li><b>اختبار واقعي</b> بأدوات قياس وإشارات متفرقة</li>
+            <li><b>فشل</b> يُفكّك اليقين المؤقت ويعيد توزيع الاحتمالات</li>
+            <li><b>إعادة تشكيل النموذج</b> حتى يصبح أقرب إلى الحقيقة التشغيلية</li>
+          </ul>
+
+          <p>ولزيادة التعقيد، قد تتزامن هذه العملية مع عدة مهام تُدار بالتوازي، مما يضاعف العبء الذهني.</p>
+
+          <h2>تنشيط مزدوج دائم للدماغ</h2>
+          <p>تتطلب هذه المهنة تفعيلًا متزامنًا غير مألوف، لا يمكن إلا لنسبة ضئيلة للغاية من البشر تحمّله:</p>
+          <ul>
+            <li>صرامة منهجية بالغة</li>
+            <li>إبداع هجومي غير متوقع</li>
+          </ul>
+
+          <p>هاتان الآليتان تستثيران دوائر معرفية مختلفة، ونادرًا ما يتم تشغيلهما معًا لفترة مطولة، نظرًا لتعارض طبيعتهما. والنتيجة: توتر ذهني مستمر.</p>
+
+          <h2>جهد مزمن، لا ذروة عابرة</h2>
+          <p>الأمر لا يتعلق بذروة جهد مؤقتة، بل هو حالة دائمة: مستوى مرتفع من التحليل المتواصل، يقظة مستمرة، وقدرة على الحفاظ على تركيز عميق رغم عدم اليقين.</p>
+
+          <p>وعلى الصعيد المعرفي البحت، لا تفرض أي مهنة تكنولوجية أخرى مثل هذه الشدة المستدامة. قد لا يبدو الأمر استعراضيًا من الخارج، لكنه في الداخل بالغ الكثافة والتطلب.</p>
+        </div>
+
+        <div class="footer">
+          <span>© الصحيفة التقنية | صفحة رأي وتحليل</span>
+          <span>نسخة ويب: تصميم صحيفة عربية داكنة</span>
+        </div>
+      </article>
+
+      <aside>
+        <section class="card" aria-label="ملخص">
+          <h3>في سطرين</h3>
+          <div class="body">
+            <p style="margin:0 0 8px;">مختبِر الاختراق لا يطارد ثغرة واحدة، بل يدير خريطة كاملة لنظام متغير، تحت ضبابية مستمرة.</p>
+            <div class="kpi">
+              <div class="box">
+                <div class="num">6</div>
+                <div class="lbl">وظائف معرفية متزامنة</div>
+              </div>
+              <div class="box">
+                <div class="num">∞</div>
+                <div class="lbl">دورات فرضية/اختبار</div>
+              </div>
+            </div>
+            <div class="progress" aria-label="مؤشر الضغط الذهني">
+              <div class="bar" style="width:78%"></div>
+            </div>
+            <div class="tags" aria-label="وسوم">
+              <span class="tag">Red Team</span>
+              <span class="tag">Pentest</span>
+              <span class="tag">Threat Modeling</span>
+              <span class="tag">Uncertainty</span>
+              <span class="tag">Cognitive Load</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="card" aria-label="ملاحظة تحريرية">
+          <h3>ملاحظة تحريرية</h3>
+          <div class="body">
+            هذا المقال مُهيّأ للقراءة بالعربية (RTL) ويستخدم خطوطًا عربية مناسبة وتأثيرات خفيفة (حبيبات، شريط أخبار، بطاقات جانبية) لإحساس صحيفة تقنية حديثة.
+          </div>
+        </section>
+      </aside>
+    </main>
+  </div>
+
+  <script>
+    // Small UX: pause marquee on hover/focus for readability
+    const marquee = document.querySelector('.marquee > div');
+    const ticker = document.querySelector('.ticker');
+
+    function setPlayState(state){
+      if(!marquee) return;
+      marquee.style.animationPlayState = state;
+    }
+
+    ticker?.addEventListener('mouseenter', () => setPlayState('paused'));
+    ticker?.addEventListener('mouseleave', () => setPlayState('running'));
+    ticker?.addEventListener('focusin', () => setPlayState('paused'));
+    ticker?.addEventListener('focusout', () => setPlayState('running'));
+
+    // Gentle reveal on scroll
+    const observed = document.querySelectorAll('article, aside .card, header');
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if(e.isIntersecting){
+          e.target.style.transition = 'transform 700ms ease, opacity 700ms ease';
+          e.target.style.transform = 'translateY(0)';
+          e.target.style.opacity = '1';
+          io.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.08 });
+
+    observed.forEach(el => {
+      el.style.transform = 'translateY(14px)';
+      el.style.opacity = '0';
+      io.observe(el);
+    });
+  </script>
+</body>
+</html>
